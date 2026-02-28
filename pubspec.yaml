@@ -1,0 +1,58 @@
+name: habit_tracker
+description: "Production-ready Habit Tracker app built with Flutter and Clean Architecture."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Charts & calendar
+  fl_chart: ^0.69.0
+  table_calendar: ^3.0.9
+  flutter_slidable: ^3.1.1
+
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
+
+  # Utilities
+  google_fonts: ^6.2.1
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.3
+  flutter_animate: ^4.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  hive_generator: ^2.0.1
+  riverpod_generator: ^2.4.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/habbit_logo.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/habbit_logo.png
+  remove_alpha_ios: true
