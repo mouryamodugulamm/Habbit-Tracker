@@ -118,7 +118,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: AppTextStyles.bodyMedium(AppColors.lightOnSurfaceVariant),
       ),
-      scaffoldBackgroundColor: AppColors.lightBackground,
+      scaffoldBackgroundColor: AppColors.lightGradientMid,
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.lightPrimary,
         foregroundColor: AppColors.lightOnPrimary,
@@ -239,7 +239,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: AppTextStyles.bodyMedium(AppColors.darkOnSurfaceVariant),
       ),
-      scaffoldBackgroundColor: AppColors.darkBackground,
+      scaffoldBackgroundColor: AppColors.glassBackground,
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.darkPrimary,
         foregroundColor: AppColors.darkOnPrimary,

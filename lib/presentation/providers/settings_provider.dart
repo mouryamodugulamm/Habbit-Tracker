@@ -12,7 +12,7 @@ final settingsServiceProvider = Provider<SettingsService>((ref) {
 final class SettingsState {
   const SettingsState({
     this.userName,
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.dark,
     this.locale,
   });
 

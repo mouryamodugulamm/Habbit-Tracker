@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
+import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/presentation/providers/settings_provider.dart';
 
 /// Profile & settings: user name, theme (light/dark/system), language.
@@ -58,10 +60,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: ListView(
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.lg),
+      body: Stack(
         children: [
+          GradientScaffoldBackground(isDark: isDark),
+          ListView(
+            physics: const ClampingScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
           _SectionHeader(icon: Icons.person_outline_rounded, label: 'Profile', colorScheme: colorScheme),
           const SizedBox(height: AppSpacing.sm),
           _ProfileCard(
@@ -173,6 +178,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             ),
           ),
+            ],
+          ),
         ],
       ),
     );
@@ -215,21 +222,10 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return GlassCard(
+      isDark: isDark,
+      useBlur: isDark,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.6) : colorScheme.surface,
-        borderRadius: AppDecorations.cardBorderRadius,
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
       child: child,
     );
   }

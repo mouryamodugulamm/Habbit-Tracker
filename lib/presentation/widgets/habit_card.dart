@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:habit_tracker/core/theme/app_colors.dart';
 import 'package:habit_tracker/core/theme/app_decorations.dart';
 import 'package:habit_tracker/core/theme/app_spacing.dart';
 import 'package:habit_tracker/core/theme/app_text_styles.dart';
@@ -28,9 +29,13 @@ class HabitCard extends ConsumerWidget {
     final streak = ref.watch(streakForHabitProvider(habit.id));
     final completedToday = habit.isCompletedToday;
     final icon = _iconForHabit(habit);
+    final useGlass = isDark;
     final accentColor = completedToday
         ? colorScheme.primary
         : colorScheme.primary.withValues(alpha: 0.5);
+    final iconColor = useGlass && completedToday
+        ? Colors.white
+        : accentColor;
 
     final content = Row(
       children: [
@@ -38,14 +43,28 @@ class HabitCard extends ConsumerWidget {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: accentColor.withValues(alpha: isDark ? 0.35 : 0.15),
+            gradient: useGlass && completedToday
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.glassGradientStart,
+                      AppColors.glassGradientEnd,
+                    ],
+                  )
+                : null,
+            color: useGlass && !completedToday
+                ? AppColors.glassSurfaceBorder
+                : accentColor.withValues(alpha: isDark ? 0.35 : 0.15),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: accentColor.withValues(alpha: 0.4),
+              color: useGlass && completedToday
+                  ? AppColors.glassGradientEnd.withValues(alpha: 0.5)
+                  : accentColor.withValues(alpha: 0.4),
               width: 1,
             ),
           ),
-          child: Icon(icon, size: 26, color: accentColor),
+          child: Icon(icon, size: 26, color: iconColor),
         ),
         const SizedBox(width: AppSpacing.lg),
         Expanded(
@@ -84,23 +103,47 @@ class HabitCard extends ConsumerWidget {
             onChanged: (_) {
               ref.read(habitNotifierProvider.notifier).toggleCompletion(habit.id, DateTime.now());
             },
-            activeColor: colorScheme.primary,
+            activeColor: useGlass ? AppColors.glassGradientEnd : colorScheme.primary,
             shape: RoundedRectangleBorder(borderRadius: AppDecorations.cardBorderRadiusSmall),
           ),
         ),
       ],
     );
 
+    final isLight = !isDark;
     final container = Container(
       decoration: BoxDecoration(
-        color: isDark ? colorScheme.surfaceContainerHighest : colorScheme.surface,
+        gradient: useGlass
+            ? null
+            : (isLight
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.lightGlassSurfaceTop,
+                      AppColors.lightGlassSurface,
+                    ],
+                  )
+                : null),
+        color: useGlass
+            ? AppColors.glassSurface
+            : (isLight ? null : colorScheme.surfaceContainerHighest),
         borderRadius: AppDecorations.cardBorderRadius,
         border: Border.all(
-          color: colorScheme.outline.withValues(alpha: isDark ? 0.35 : 0.18),
+          color: useGlass
+              ? AppColors.glassSurfaceBorder
+              : (isLight ? AppColors.lightGlassSurfaceBorder : colorScheme.outline.withValues(alpha: 0.35)),
           width: 1,
         ),
         boxShadow: [
-          if (completedToday)
+          if (completedToday && useGlass)
+            BoxShadow(
+              color: AppColors.glassGradientEnd.withValues(alpha: 0.15),
+              offset: const Offset(0, 2),
+              blurRadius: 12,
+              spreadRadius: 0,
+            )
+          else if (completedToday)
             BoxShadow(
               color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.08),
               offset: const Offset(0, 2),
@@ -108,11 +151,18 @@ class HabitCard extends ConsumerWidget {
               spreadRadius: 0,
             ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.05),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
+            color: isLight ? AppColors.lightGlassShadow : Colors.black.withValues(alpha: 0.2),
+            offset: Offset(0, isLight ? 3 : 2),
+            blurRadius: isLight ? 16 : 8,
             spreadRadius: 0,
           ),
+          if (isLight)
+            BoxShadow(
+              color: AppColors.lightGlassShadowAccent,
+              offset: const Offset(0, 1),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),

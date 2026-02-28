@@ -22,7 +22,7 @@ class SettingsService {
 
   ThemeMode get themeMode {
     final i = _prefs.getInt(_keyThemeMode);
-    if (i == null) return ThemeMode.system;
+    if (i == null) return ThemeMode.dark;
     switch (i) {
       case 1:
         return ThemeMode.light;

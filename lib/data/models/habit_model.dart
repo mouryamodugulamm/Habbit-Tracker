@@ -26,6 +26,8 @@ class HabitModel extends Habit {
   final int? reminderMinutesSinceMidnight;
 
   @HiveField(5)
+  @override
+  // ignore: overridden_fields
   final int? iconIndex;
 
   HabitModel({

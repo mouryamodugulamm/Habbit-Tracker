@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
 import 'package:habit_tracker/core/constants/habit_icons.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
@@ -199,6 +199,38 @@ class _HabitHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isDark) {
+      return GlassCard(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.lg),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.glassGradientStart,
+                    AppColors.glassGradientEnd,
+                  ],
+                ),
+                borderRadius: AppDecorations.cardBorderRadiusSmall,
+              ),
+              child: Icon(icon, size: 32, color: Colors.white),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Text(
+                habit.name,
+                style: AppTextStyles.titleLarge(colorScheme.onSurface).copyWith(fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.lg),
       decoration: BoxDecoration(
@@ -206,8 +238,8 @@ class _HabitHeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.18),
-            colorScheme.secondary.withValues(alpha: isDark ? 0.25 : 0.12),
+            colorScheme.primary.withValues(alpha: 0.18),
+            colorScheme.secondary.withValues(alpha: 0.12),
           ],
         ),
         borderRadius: AppDecorations.cardBorderRadius,
@@ -350,10 +382,16 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark
-        ? colorScheme.surfaceContainerHighest
-        : accentColor.withValues(alpha: 0.12);
-    final borderColor = isDark ? colorScheme.outline.withValues(alpha: 0.5) : accentColor.withValues(alpha: 0.3);
+    final useGlass = isDark;
+    final bgColor = useGlass
+        ? AppColors.glassSurface
+        : (isDark ? colorScheme.surfaceContainerHighest : accentColor.withValues(alpha: 0.12));
+    final borderColor = useGlass
+        ? AppColors.glassSurfaceBorder
+        : (isDark ? colorScheme.outline.withValues(alpha: 0.5) : accentColor.withValues(alpha: 0.3));
+    final chipAccent = (useGlass && accentColor == colorScheme.primary)
+        ? AppColors.glassGradientEnd
+        : accentColor;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
@@ -361,7 +399,16 @@ class _StatChip extends StatelessWidget {
         color: bgColor,
         borderRadius: AppDecorations.cardBorderRadiusSmall,
         border: Border.all(color: borderColor),
-        boxShadow: isDark
+        boxShadow: useGlass
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: 0,
+                ),
+              ]
+            : isDark
             ? null
             : [
                 BoxShadow(
@@ -374,7 +421,7 @@ class _StatChip extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 20, color: accentColor),
+          Icon(icon, size: 20, color: chipAccent),
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
@@ -418,10 +465,26 @@ class _CalendarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final today = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final useGlass = isDark;
+    final decoration = useGlass
+        ? BoxDecoration(
+            color: AppColors.glassSurface,
+            borderRadius: AppDecorations.cardBorderRadius,
+            border: Border.all(color: AppColors.glassSurfaceBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+                spreadRadius: 0,
+              ),
+            ],
+          )
+        : (isDark
+            ? AppDecorations.cardDark(color: colorScheme.surfaceContainerHighest)
+            : AppDecorations.cardLight(color: colorScheme.surface));
     return Container(
-      decoration: isDark
-          ? AppDecorations.cardDark(color: colorScheme.surfaceContainerHighest)
-          : AppDecorations.cardLight(color: colorScheme.surface),
+      decoration: decoration,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
       child: TableCalendar(
         firstDay: DateTime.utc(2020, 1, 1),
@@ -448,7 +511,7 @@ class _CalendarCard extends StatelessWidget {
               child: Icon(
                 Icons.check_circle_rounded,
                 size: 14,
-                color: colorScheme.primary,
+                color: useGlass ? AppColors.glassGradientEnd : colorScheme.primary,
               ),
             );
           },
@@ -469,26 +532,36 @@ class _CalendarCard extends StatelessWidget {
           defaultTextStyle: AppTextStyles.bodyMedium(colorScheme.onSurface),
           weekendTextStyle: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
           outsideTextStyle: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-          selectedTextStyle: AppTextStyles.bodyMedium(colorScheme.onPrimary).copyWith(fontWeight: FontWeight.w600),
-          todayTextStyle: AppTextStyles.bodyMedium(colorScheme.primary).copyWith(fontWeight: FontWeight.w700),
+          selectedTextStyle: AppTextStyles.bodyMedium(useGlass ? Colors.white : colorScheme.onPrimary).copyWith(fontWeight: FontWeight.w600),
+          todayTextStyle: AppTextStyles.bodyMedium(useGlass ? AppColors.glassGradientEnd : colorScheme.primary).copyWith(fontWeight: FontWeight.w700),
           selectedDecoration: BoxDecoration(
-            color: colorScheme.primary,
+            gradient: useGlass
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.glassGradientStart, AppColors.glassGradientEnd],
+                  )
+                : null,
+            color: useGlass ? null : colorScheme.primary,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.4),
+                color: (useGlass ? AppColors.glassGradientEnd : colorScheme.primary).withValues(alpha: 0.4),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           todayDecoration: BoxDecoration(
-            color: colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15),
+            color: (useGlass ? AppColors.glassGradientEnd : colorScheme.primary).withValues(alpha: isDark ? 0.25 : 0.15),
             shape: BoxShape.circle,
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.6), width: 1.5),
+            border: Border.all(
+              color: (useGlass ? AppColors.glassGradientEnd : colorScheme.primary).withValues(alpha: 0.6),
+              width: 1.5,
+            ),
           ),
           markerDecoration: BoxDecoration(
-            color: colorScheme.primary,
+            color: useGlass ? AppColors.glassGradientEnd : colorScheme.primary,
             shape: BoxShape.circle,
           ),
         ),
@@ -500,11 +573,15 @@ class _CalendarCard extends StatelessWidget {
           headerPadding: const EdgeInsets.symmetric(vertical: 12),
           formatButtonPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           formatButtonDecoration: BoxDecoration(
-            color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.4 : 0.6),
+            color: useGlass
+                ? AppColors.glassSurface
+                : colorScheme.primaryContainer.withValues(alpha: isDark ? 0.4 : 0.6),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: useGlass ? AppColors.glassSurfaceBorder : colorScheme.primary.withValues(alpha: 0.3),
+            ),
           ),
-          formatButtonTextStyle: AppTextStyles.labelMedium(colorScheme.onPrimaryContainer).copyWith(
+          formatButtonTextStyle: AppTextStyles.labelMedium(useGlass ? colorScheme.onSurface : colorScheme.onPrimaryContainer).copyWith(
             fontWeight: FontWeight.w600,
           ),
           titleTextStyle: AppTextStyles.titleMedium(colorScheme.onSurface).copyWith(
@@ -519,7 +596,7 @@ class _CalendarCard extends StatelessWidget {
           leftChevronIcon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+              color: useGlass ? AppColors.glassSurface : colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.chevron_left_rounded, size: 22, color: colorScheme.onSurface),
@@ -527,7 +604,7 @@ class _CalendarCard extends StatelessWidget {
           rightChevronIcon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+              color: useGlass ? AppColors.glassSurface : colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.chevron_right_rounded, size: 22, color: colorScheme.onSurface),
@@ -567,11 +644,27 @@ class _ThisWeekRow extends StatelessWidget {
       return (day, completedSet.contains(day));
     });
 
+    final useGlass = isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.md),
-      decoration: isDark
-          ? AppDecorations.cardDark(color: colorScheme.surfaceContainerHighest)
-          : AppDecorations.cardLight(color: colorScheme.surface),
+      decoration: useGlass
+          ? BoxDecoration(
+              color: AppColors.glassSurface,
+              borderRadius: AppDecorations.cardBorderRadius,
+              border: Border.all(color: AppColors.glassSurfaceBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                ),
+              ],
+            )
+          : (isDark
+              ? AppDecorations.cardDark(color: colorScheme.surfaceContainerHighest)
+              : AppDecorations.cardLight(color: colorScheme.surface)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(7, (i) {
@@ -599,12 +692,19 @@ class _ThisWeekRow extends StatelessWidget {
                   height: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: completed
+                    gradient: completed && useGlass
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.glassGradientStart, AppColors.glassGradientEnd],
+                          )
+                        : null,
+                    color: completed && !useGlass
                         ? colorScheme.primary
-                        : colorScheme.error.withValues(alpha: isDark ? 0.5 : 0.35),
+                        : (completed && useGlass ? null : colorScheme.error.withValues(alpha: isDark ? 0.5 : 0.35)),
                   ),
                   child: completed
-                      ? Icon(Icons.check_rounded, size: 18, color: colorScheme.onPrimary)
+                      ? Icon(Icons.check_rounded, size: 18, color: useGlass ? Colors.white : colorScheme.onPrimary)
                       : null,
                 ),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/constants/habit_icons.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/domain/entities/goal.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
@@ -106,29 +107,48 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.screen),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.flag_rounded, size: 64, color: colorScheme.primary.withValues(alpha: 0.6)),
-                        const SizedBox(height: AppSpacing.xl),
-                        Text(
-                          'No active goals',
-                          style: AppTextStyles.titleLarge(colorScheme.onSurface),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Add a goal when creating or editing a habit to track long-term progress.',
-                          style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: AppSpacing.xxl),
-                        FilledButton.icon(
-                          onPressed: () => AppRouter.toAddHabit(context),
-                          icon: const Icon(Icons.add_rounded, size: 20),
-                          label: const Text('Add habit with goal'),
-                        ),
-                      ],
+                    child: GlassCard(
+                      useBlur: isDark,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xxl,
+                        vertical: AppSpacing.xxl + AppSpacing.lg,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppColors.glassGradientEnd : colorScheme.primary).withValues(alpha: isDark ? 0.2 : 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.flag_rounded,
+                              size: 56,
+                              color: isDark ? AppColors.glassGradientEnd : colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Text(
+                            'No active goals',
+                            style: AppTextStyles.titleLarge(colorScheme.onSurface),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Add a goal when creating or editing a habit to track long-term progress.',
+                            style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          FilledButton.icon(
+                            onPressed: () => AppRouter.toAddHabit(context),
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: const Text('Add habit with goal'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -192,62 +212,84 @@ class _GoalCard extends StatelessWidget {
     final progressLabel = '$currentProgress / ${goal.targetValue} $targetLabel';
     final isReached = currentProgress >= goal.targetValue;
 
+    final useGlass = isDark;
+    final progressColor = useGlass && isReached
+        ? AppColors.glassGradientEnd
+        : (isReached ? colorScheme.primary : colorScheme.tertiary);
+    final iconColor = useGlass ? AppColors.glassGradientEnd : colorScheme.primary;
+
+    final cardContent = Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _iconForHabit(habit),
+                color: iconColor,
+                size: 28,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  habitName,
+                  style: AppTextStyles.titleMedium(colorScheme.onSurface),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            progressLabel,
+            style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          LinearProgressIndicator(
+            value: (goal.targetValue > 0) ? (currentProgress / goal.targetValue).clamp(0.0, 1.0) : 0,
+            backgroundColor: useGlass ? AppColors.glassSurfaceBorder : colorScheme.surfaceContainerHighest,
+            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: onClose,
+                child: Text('Close goal', style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              FilledButton(
+                onPressed: onMarkDone,
+                child: const Text('Mark done'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (useGlass) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: GlassCard(
+          useBlur: true,
+          child: InkWell(
+            onTap: onTapHabit,
+            borderRadius: AppDecorations.cardBorderRadiusLarge,
+            child: cardContent,
+          ),
+        ),
+      );
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
         onTap: onTapHabit,
         borderRadius: AppDecorations.cardBorderRadius,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _iconForHabit(habit),
-                    color: colorScheme.primary,
-                    size: 28,
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      habitName,
-                      style: AppTextStyles.titleMedium(colorScheme.onSurface),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                progressLabel,
-                style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              LinearProgressIndicator(
-                value: (goal.targetValue > 0) ? (currentProgress / goal.targetValue).clamp(0.0, 1.0) : 0,
-                backgroundColor: colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(isReached ? colorScheme.primary : colorScheme.tertiary),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: onClose,
-                    child: Text('Close goal', style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  FilledButton(
-                    onPressed: onMarkDone,
-                    child: const Text('Mark done'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        child: cardContent,
       ),
     );
   }

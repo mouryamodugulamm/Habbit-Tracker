@@ -26,12 +26,7 @@ void main() async {
       notificationServiceProvider.overrideWithValue(notificationService),
   ];
 
-  runApp(
-    ProviderScope(
-      overrides: overrides,
-      child: const HabitTrackerApp(),
-    ),
-  );
+  runApp(ProviderScope(overrides: overrides, child: const HabitTrackerApp()));
 }
 
 Future<void> _initHive() async {

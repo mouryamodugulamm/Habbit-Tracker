@@ -6,12 +6,10 @@ class Goal {
     required this.habitId,
     required this.targetType,
     required this.targetValue,
-    DateTime? completedAt,
-    DateTime? closedAt,
+    this.completedAt,
+    this.closedAt,
     DateTime? createdAt,
-  })  : completedAt = completedAt,
-        closedAt = closedAt,
-        _createdAt = createdAt ?? DateTime.now();
+  }) : _createdAt = createdAt ?? DateTime.now();
 
   final String id;
   final String habitId;

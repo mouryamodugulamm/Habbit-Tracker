@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
+import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/domain/entities/goal.dart';
 import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
@@ -100,6 +102,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -109,14 +112,21 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
+      body: Stack(
+        children: [
+          GradientScaffoldBackground(isDark: isDark),
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: GlassCard(
+                isDark: isDark,
+                useBlur: isDark,
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
                 controller: _nameController,
                 focusNode: _nameFocusNode,
                 decoration: InputDecoration(
@@ -160,7 +170,7 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
               if (_goalEnabled) ...[
                 const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<GoalTargetType>(
-                  value: _goalTargetType ?? GoalTargetType.totalDays,
+                  initialValue: _goalTargetType ?? GoalTargetType.totalDays,
                   decoration: const InputDecoration(
                     labelText: 'Goal type',
                     border: OutlineInputBorder(),
@@ -254,10 +264,13 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                         ),
                       )
                     : const Text('Save'),
+                  ),
+                ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
