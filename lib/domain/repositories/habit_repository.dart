@@ -7,4 +7,5 @@ abstract class HabitRepository {
   Future<List<Habit>> getHabits();
   Future<Habit?> getHabitById(String id);
   Future<void> updateHabit(Habit habit);
+  Future<void> clearAll();
 }

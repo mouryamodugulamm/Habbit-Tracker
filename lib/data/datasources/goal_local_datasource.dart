@@ -82,4 +82,14 @@ class GoalLocalDataSource {
       throw StorageException('Failed to delete goals for habit', e);
     }
   }
+
+  /// Removes all goals from the box.
+  Future<void> clearAll() async {
+    await _ensureBoxOpen();
+    try {
+      await _box.clear();
+    } catch (e) {
+      throw StorageException('Failed to clear goals', e);
+    }
+  }
 }

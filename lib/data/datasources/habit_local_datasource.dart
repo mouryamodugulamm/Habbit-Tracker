@@ -49,4 +49,13 @@ class HabitLocalDataSource {
       throw StorageException('Failed to delete habit', e);
     }
   }
+
+  /// Removes all habits from the box.
+  Future<void> clearAll() async {
+    try {
+      await _box.clear();
+    } catch (e) {
+      throw StorageException('Failed to clear habits', e);
+    }
+  }
 }

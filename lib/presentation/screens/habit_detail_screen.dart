@@ -6,8 +6,11 @@ import 'package:habit_tracker/core/core.dart';
 import 'package:habit_tracker/core/router/app_router.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
+import 'package:habit_tracker/domain/entities/goal.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
+import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
+import 'package:habit_tracker/presentation/utils/frequency_goal_text.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 /// Habit detail: calendar with completed dates, weekly bar chart, streak and completion stats.
@@ -166,6 +169,8 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _HabitHeroCard(habit: habit, colorScheme: colorScheme, isDark: isDark, icon: _iconForHabit(habit)),
+                const SizedBox(height: AppSpacing.lg),
+                _ScheduleAndGoalRow(habit: habit, colorScheme: colorScheme),
                 const SizedBox(height: AppSpacing.xl),
                 _StatsRow(
                   currentStreak: streak?.currentStreak ?? 0,
@@ -376,6 +381,78 @@ class _HabitHeroCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleAndGoalRow extends ConsumerWidget {
+  const _ScheduleAndGoalRow({
+    required this.habit,
+    required this.colorScheme,
+  });
+
+  final Habit habit;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final goal = ref.watch(goalForHabitProvider(habit.id));
+    final scheduleDesc = frequencyScheduleDescription(habit.frequency, habit.customWeekdays);
+    final targetPerDay = habit.effectiveTargetPerDay;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: AppDecorations.cardBorderRadiusSmall,
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, size: 18, color: colorScheme.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Schedule',
+                style: AppTextStyles.labelMedium(colorScheme.onSurface).copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'You do this $scheduleDesc.'
+                '${targetPerDay > 1 ? " $targetPerDay times per day." : ""}',
+            style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+          ),
+          if (goal != null && goal.isActive) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.flag_rounded, size: 18, color: colorScheme.tertiary),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Goal',
+                  style: AppTextStyles.labelMedium(colorScheme.onSurface).copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              goal.targetType == GoalTargetType.totalDays
+                  ? '${goal.targetValue} days total'
+                  : '${goal.targetValue} days in a row',
+              style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );

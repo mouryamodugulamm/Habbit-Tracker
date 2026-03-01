@@ -37,4 +37,9 @@ class HabitRepositoryImpl implements HabitRepository {
     final model = HabitModel.fromEntity(habit);
     await _dataSource.put(model);
   }
+
+  @override
+  Future<void> clearAll() async {
+    await _dataSource.clearAll();
+  }
 }

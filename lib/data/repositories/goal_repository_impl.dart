@@ -41,4 +41,9 @@ class GoalRepositoryImpl implements GoalRepository {
     final model = GoalModel.fromEntity(goal);
     await _dataSource.put(model);
   }
+
+  @override
+  Future<void> clearAll() async {
+    await _dataSource.clearAll();
+  }
 }

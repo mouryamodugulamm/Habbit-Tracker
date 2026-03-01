@@ -7,6 +7,7 @@ import 'package:habit_tracker/domain/entities/goal.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
 import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
+import 'package:habit_tracker/presentation/utils/goal_type_info_dialog.dart';
 import 'package:habit_tracker/presentation/widgets/habit_icon_picker.dart';
 import 'package:uuid/uuid.dart';
 
@@ -191,6 +192,11 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 'Frequency',
                 style: AppTextStyles.labelLarge(colorScheme.onSurfaceVariant),
               ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Which days you do this habit. Goals only count these days.',
+                style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+              ),
               const SizedBox(height: AppSpacing.sm),
               SegmentedButton<HabitFrequency>(
                 segments: const [
@@ -251,32 +257,48 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 ],
               ),
               if (_goalEnabled) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Only the days you picked above count toward your goal.',
+                  style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+                ),
                 const SizedBox(height: AppSpacing.sm),
-                DropdownButtonFormField<GoalTargetType>(
-                  initialValue: _goalTargetType ?? GoalTargetType.totalDays,
-                  decoration: const InputDecoration(
-                    labelText: 'Goal type',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: GoalTargetType.totalDays,
-                      child: Text('Complete this many times (any days)'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<GoalTargetType>(
+                        isExpanded: true,
+                        value: _goalTargetType ?? GoalTargetType.totalDays,
+                        decoration: const InputDecoration(
+                          labelText: 'What kind of goal?',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: GoalTargetType.totalDays,
+                            child: Text('Total days'),
+                          ),
+                          DropdownMenuItem(
+                            value: GoalTargetType.streak,
+                            child: Text('Streak'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => _goalTargetType = v ?? GoalTargetType.totalDays),
+                      ),
                     ),
-                    DropdownMenuItem(
-                      value: GoalTargetType.streak,
-                      child: Text('Do it this many days in a row'),
+                    IconButton(
+                      icon: Icon(Icons.help_outline_rounded, color: colorScheme.primary, size: 24),
+                      onPressed: () => showGoalTypeInfoDialog(context),
+                      tooltip: 'Explain goal types',
                     ),
                   ],
-                  onChanged: (v) => setState(() => _goalTargetType = v ?? GoalTargetType.totalDays),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   initialValue: _goalTargetValue?.toString() ?? '',
                   decoration: InputDecoration(
-                    labelText: _goalTargetType == GoalTargetType.streak
-                        ? 'How many days in a row?'
-                        : 'How many times to complete?',
+                    labelText: 'How many?',
                     hintText: _goalTargetType == GoalTargetType.streak ? 'e.g. 7' : 'e.g. 30',
                     border: const OutlineInputBorder(),
                   ),
@@ -289,8 +311,8 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   _goalTargetType == GoalTargetType.streak
-                      ? 'Aim for a streak of consecutive days.'
-                      : 'Aim for this many completions (any days count).',
+                      ? 'Reach this many days in a row without missing.'
+                      : 'Reach this many days total. Missed days don\'t reset your count.',
                   style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
                 ),
               ],

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/router/app_router.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
+import 'package:habit_tracker/presentation/providers/backup_providers.dart';
 import 'package:habit_tracker/presentation/providers/settings_provider.dart';
 
 /// Profile & settings: user name, theme (light/dark/system), language.
@@ -45,6 +47,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context,
     ).showSnackBar(const SnackBar(content: Text('Settings applied')));
     Navigator.of(context).pop();
+  }
+
+  Future<void> _exportBackup(WidgetRef ref, ColorScheme colorScheme) async {
+    final error = await exportBackup(ref);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $error'),
+          backgroundColor: colorScheme.error,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup ready to share or save')),
+      );
+    }
+  }
+
+  Future<void> _restoreBackup(WidgetRef ref, ColorScheme colorScheme) async {
+    final result = await restoreBackup(ref);
+    if (!mounted) return;
+    switch (result) {
+      case RestoreSuccess():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup restored')),
+        );
+      case RestoreError(:final message):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restore failed: $message'),
+            backgroundColor: colorScheme.error,
+          ),
+        );
+      case RestoreCancelled():
+        break;
+    }
   }
 
   @override
@@ -207,6 +246,94 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   selected: _locale == null,
                   onTap: () => setState(() => _locale = null),
                   colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _SectionHeader(
+                icon: Icons.backup_rounded,
+                label: 'Backup / restore',
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Export all habits and completions to a JSON file. Restore on this device or a new one from Profile → Backup / restore.',
+                      style: AppTextStyles.bodySmall(
+                        colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _exportBackup(ref, colorScheme),
+                            icon: const Icon(Icons.upload_rounded, size: 20),
+                            label: const Text('Export'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _restoreBackup(ref, colorScheme),
+                            icon: const Icon(Icons.download_rounded, size: 20),
+                            label: const Text('Restore'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _SectionHeader(
+                icon: Icons.privacy_tip_outlined,
+                label: 'Data & privacy',
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: InkWell(
+                  onTap: () => AppRouter.toDataPrivacy(context),
+                  borderRadius: AppDecorations.cardBorderRadiusSmall,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'What we store and delete all data',
+                                style: AppTextStyles.bodyLarge(
+                                  colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'See what\'s stored locally and optionally delete everything.',
+                                style: AppTextStyles.bodySmall(
+                                  colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xxl),

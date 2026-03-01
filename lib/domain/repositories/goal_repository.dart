@@ -7,4 +7,5 @@ abstract class GoalRepository {
   Future<List<Goal>> getGoals();
   Future<Goal?> getGoalByHabitId(String habitId);
   Future<void> updateGoal(Goal goal);
+  Future<void> clearAll();
 }
