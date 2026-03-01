@@ -23,19 +23,21 @@ final class SettingsState {
 
 final settingsNotifierProvider =
     StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
-  final service = ref.watch(settingsServiceProvider);
-  return SettingsNotifier(service);
-});
+      final service = ref.watch(settingsServiceProvider);
+      return SettingsNotifier(service);
+    });
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
   SettingsNotifier(this._service)
-      : super(SettingsState(
+    : super(
+        SettingsState(
           userName: _service.userName,
           themeMode: _service.themeMode,
           locale: _service.languageCode != null
               ? Locale(_service.languageCode!)
               : null,
-        ));
+        ),
+      );
 
   final SettingsService _service;
 

@@ -63,7 +63,9 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.lightOnSurface,
-        titleTextStyle: AppTextStyles.titleLarge(AppColors.lightOnSurface).copyWith(fontWeight: FontWeight.w700),
+        titleTextStyle: AppTextStyles.titleLarge(
+          AppColors.lightOnSurface,
+        ).copyWith(fontWeight: FontWeight.w700),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
@@ -72,7 +74,10 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.06),
         shape: RoundedRectangleBorder(
           borderRadius: AppDecorations.cardBorderRadius,
-          side: BorderSide(color: AppColors.lightOutline.withValues(alpha: 0.6), width: 1),
+          side: BorderSide(
+            color: AppColors.lightOutline.withValues(alpha: 0.6),
+            width: 1,
+          ),
         ),
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
@@ -87,7 +92,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(AppColors.lightOnPrimary).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(
+            AppColors.lightOnPrimary,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -100,13 +107,17 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(AppColors.lightOnPrimary).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(
+            AppColors.lightOnPrimary,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.lightSurfaceVariant,
-        border: OutlineInputBorder(borderRadius: AppDecorations.cardBorderRadiusSmall),
+        border: OutlineInputBorder(
+          borderRadius: AppDecorations.cardBorderRadiusSmall,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppDecorations.cardBorderRadiusSmall,
           borderSide: const BorderSide(color: AppColors.lightOutline),
@@ -115,7 +126,10 @@ class AppTheme {
           borderRadius: AppDecorations.cardBorderRadiusSmall,
           borderSide: const BorderSide(color: AppColors.lightPrimary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: AppTextStyles.bodyMedium(AppColors.lightOnSurfaceVariant),
       ),
       scaffoldBackgroundColor: AppColors.lightGradientMid,
@@ -184,7 +198,9 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.darkOnSurface,
-        titleTextStyle: AppTextStyles.titleLarge(AppColors.darkOnSurface).copyWith(fontWeight: FontWeight.w700),
+        titleTextStyle: AppTextStyles.titleLarge(
+          AppColors.darkOnSurface,
+        ).copyWith(fontWeight: FontWeight.w700),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
@@ -193,7 +209,10 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: AppDecorations.cardBorderRadius,
-          side: BorderSide(color: AppColors.darkOutline.withValues(alpha: 0.6), width: 1),
+          side: BorderSide(
+            color: AppColors.darkOutline.withValues(alpha: 0.6),
+            width: 1,
+          ),
         ),
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
@@ -208,7 +227,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(AppColors.darkOnPrimary).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(
+            AppColors.darkOnPrimary,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -221,13 +242,17 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(AppColors.darkOnPrimary).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(
+            AppColors.darkOnPrimary,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurface,
-        border: OutlineInputBorder(borderRadius: AppDecorations.cardBorderRadiusSmall),
+        border: OutlineInputBorder(
+          borderRadius: AppDecorations.cardBorderRadiusSmall,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppDecorations.cardBorderRadiusSmall,
           borderSide: const BorderSide(color: AppColors.darkOutline),
@@ -236,7 +261,10 @@ class AppTheme {
           borderRadius: AppDecorations.cardBorderRadiusSmall,
           borderSide: const BorderSide(color: AppColors.darkPrimary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: AppTextStyles.bodyMedium(AppColors.darkOnSurfaceVariant),
       ),
       scaffoldBackgroundColor: AppColors.glassBackground,
