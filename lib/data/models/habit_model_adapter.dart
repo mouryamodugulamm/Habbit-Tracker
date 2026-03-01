@@ -1,12 +1,12 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
+import 'package:hive/hive.dart';
 
-part of 'habit_model.dart';
+import 'package:habit_tracker/data/models/habit_model.dart';
 
-// **************************************************************************
-// TypeAdapterGenerator
-// **************************************************************************
-
-class HabitModelAdapter extends TypeAdapter<HabitModel> {
+/// Custom TypeAdapter for [HabitModel] with backward-compatible defaults for
+/// older Hive data (missing isArchived, frequencyIndex, customWeekdays).
+/// Register this in main.dart instead of the generated HabitModelAdapter so
+/// that re-running build_runner does not break reading existing boxes.
+class HabitModelCompatAdapter extends TypeAdapter<HabitModel> {
   @override
   final int typeId = 0;
 
@@ -16,18 +16,20 @@ class HabitModelAdapter extends TypeAdapter<HabitModel> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    final msList = (fields[2] as List?)?.cast<int>() ?? [];
+    final notesRaw = (fields[10] as List?)?.cast<String>();
     return HabitModel(
       modelId: fields[0] as String,
       modelName: fields[1] as String,
-      completedDatesMs: (fields[2] as List?)?.cast<int>(),
+      completedDatesMs: msList,
       createdAtMs: fields[3] as int?,
       reminderMinutesSinceMidnight: fields[4] as int?,
       iconIndex: fields[5] as int?,
-      isArchived: fields[6] as bool,
+      isArchived: fields[6] as bool? ?? false,
       category: fields[7] as String?,
-      frequencyIndex: fields[8] as int,
-      customWeekdays: (fields[9] as List?)?.cast<int>(),
-      completionNotes: (fields[10] as List?)?.cast<String>(),
+      frequencyIndex: fields[8] as int? ?? 0,
+      customWeekdays: (fields[9] as List?)?.cast<int>() ?? [],
+      completionNotes: notesRaw,
       targetCountPerDay: fields[11] as int?,
     );
   }
@@ -57,18 +59,8 @@ class HabitModelAdapter extends TypeAdapter<HabitModel> {
       ..writeByte(9)
       ..write(obj.customWeekdays)
       ..writeByte(10)
-      ..write(obj.completionNotes)
+      ..write(obj.completionNotes ?? <String>[])
       ..writeByte(11)
       ..write(obj.targetCountPerDay);
   }
-
-  @override
-  int get hashCode => typeId.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is HabitModelAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
 }

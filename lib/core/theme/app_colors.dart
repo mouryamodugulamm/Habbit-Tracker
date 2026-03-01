@@ -49,6 +49,7 @@ abstract final class AppColors {
   static const Color lightGlassSurfaceBorder = Color(0xFFD4CEE0);
   static const Color lightGlassShadow = Color(0x18000000);
   static const Color lightGlassShadowAccent = Color(0x127C3AED);
+
   /// Very subtle dot tint for light card pattern
   static const Color lightGlassPatternDot = Color(0x0A7C3AED);
 
@@ -101,4 +102,3 @@ abstract final class AppColors {
   static const Color glassGradientStart = Color(0xFF6366F1);
   static const Color glassGradientEnd = Color(0xFF8B5CF6);
 }
-

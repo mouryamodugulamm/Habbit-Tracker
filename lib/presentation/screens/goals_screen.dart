@@ -14,7 +14,9 @@ import 'package:habit_tracker/core/router/app_router.dart';
 IconData _iconForHabit(Habit? habit) {
   if (habit == null) return Icons.flag_rounded;
   final idx = habit.iconIndex;
-  if (idx != null && idx >= 0 && idx < habitIcons.length) return habitIcons[idx];
+  if (idx != null && idx >= 0 && idx < habitIcons.length) {
+    return habitIcons[idx];
+  }
   return habitIcons[habit.id.hashCode.abs() % habitIcons.length];
 }
 
@@ -65,7 +67,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        flexibleSpace: Container(decoration: BoxDecoration(gradient: headerGradient)),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(gradient: headerGradient),
+        ),
         leading: Padding(
           padding: const EdgeInsets.only(left: AppSpacing.xs),
           child: IconButton.filled(
@@ -80,7 +84,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         ),
         title: Text(
           'Goals',
-          style: AppTextStyles.titleLarge(colorScheme.onSurface).copyWith(fontWeight: FontWeight.w700),
+          style: AppTextStyles.titleLarge(
+            colorScheme.onSurface,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
         titleSpacing: 0,
       ),
@@ -95,9 +101,17 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline_rounded, size: 48, color: colorScheme.error),
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: colorScheme.error,
+                    ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text(err.toString(), style: AppTextStyles.bodyMedium(colorScheme.error), textAlign: TextAlign.center),
+                    Text(
+                      err.toString(),
+                      style: AppTextStyles.bodyMedium(colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               ),
@@ -120,25 +134,35 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                           Container(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             decoration: BoxDecoration(
-                              color: (isDark ? AppColors.glassGradientEnd : colorScheme.primary).withValues(alpha: isDark ? 0.2 : 0.15),
+                              color:
+                                  (isDark
+                                          ? AppColors.glassGradientEnd
+                                          : colorScheme.primary)
+                                      .withValues(alpha: isDark ? 0.2 : 0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Icon(
                               Icons.flag_rounded,
                               size: 56,
-                              color: isDark ? AppColors.glassGradientEnd : colorScheme.primary,
+                              color: isDark
+                                  ? AppColors.glassGradientEnd
+                                  : colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xl),
                           Text(
                             'No active goals',
-                            style: AppTextStyles.titleLarge(colorScheme.onSurface),
+                            style: AppTextStyles.titleLarge(
+                              colorScheme.onSurface,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             'Add a goal when creating or editing a habit to track long-term progress.',
-                            style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
+                            style: AppTextStyles.bodyMedium(
+                              colorScheme.onSurfaceVariant,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: AppSpacing.xxl),
@@ -156,20 +180,35 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
               final habits = habitsValue.valueOrNull ?? [];
               return ListView.builder(
                 physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xxxl),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.xxxl,
+                ),
                 itemCount: activeGoals.length,
                 itemBuilder: (context, index) {
                   final goal = activeGoals[index];
-                  final habit = habits.where((h) => h.id == goal.habitId).firstOrNull;
+                  final habit = habits
+                      .where((h) => h.id == goal.habitId)
+                      .firstOrNull;
                   return _GoalCard(
                     goal: goal,
                     habit: habit,
                     colorScheme: colorScheme,
                     isDark: isDark,
-                    onMarkDone: () => ref.read(goalNotifierProvider.notifier).markGoalCompleted(goal),
-                    onClose: () => ref.read(goalNotifierProvider.notifier).markGoalClosed(goal),
-                    onTapHabit: habit != null ? () => AppRouter.toHabitDetail(context, habit.id) : null,
-                    streak: habit != null ? ref.watch(streakForHabitProvider(habit.id)) : null,
+                    onMarkDone: () => ref
+                        .read(goalNotifierProvider.notifier)
+                        .markGoalCompleted(goal),
+                    onClose: () => ref
+                        .read(goalNotifierProvider.notifier)
+                        .markGoalClosed(goal),
+                    onTapHabit: habit != null
+                        ? () => AppRouter.toHabitDetail(context, habit.id)
+                        : null,
+                    streak: habit != null
+                        ? ref.watch(streakForHabitProvider(habit.id))
+                        : null,
                   );
                 },
               );
@@ -206,9 +245,11 @@ class _GoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final habitName = habit?.name ?? 'Unknown habit';
     final currentProgress = goal.targetType == GoalTargetType.totalDays
-        ? (habit?.completedDates.length ?? 0)
+        ? (habit?.completedDaysCount ?? 0)
         : (streak?.currentStreak ?? 0);
-    final targetLabel = goal.targetType == GoalTargetType.totalDays ? 'days' : 'day streak';
+    final targetLabel = goal.targetType == GoalTargetType.totalDays
+        ? 'days'
+        : 'day streak';
     final progressLabel = '$currentProgress / ${goal.targetValue} $targetLabel';
     final isReached = currentProgress >= goal.targetValue;
 
@@ -216,7 +257,9 @@ class _GoalCard extends StatelessWidget {
     final progressColor = useGlass && isReached
         ? AppColors.glassGradientEnd
         : (isReached ? colorScheme.primary : colorScheme.tertiary);
-    final iconColor = useGlass ? AppColors.glassGradientEnd : colorScheme.primary;
+    final iconColor = useGlass
+        ? AppColors.glassGradientEnd
+        : colorScheme.primary;
 
     final cardContent = Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -225,11 +268,7 @@ class _GoalCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                _iconForHabit(habit),
-                color: iconColor,
-                size: 28,
-              ),
+              Icon(_iconForHabit(habit), color: iconColor, size: 28),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
@@ -247,8 +286,12 @@ class _GoalCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           LinearProgressIndicator(
-            value: (goal.targetValue > 0) ? (currentProgress / goal.targetValue).clamp(0.0, 1.0) : 0,
-            backgroundColor: useGlass ? AppColors.glassSurfaceBorder : colorScheme.surfaceContainerHighest,
+            value: (goal.targetValue > 0)
+                ? (currentProgress / goal.targetValue).clamp(0.0, 1.0)
+                : 0,
+            backgroundColor: useGlass
+                ? AppColors.glassSurfaceBorder
+                : colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(progressColor),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -257,7 +300,12 @@ class _GoalCard extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: onClose,
-                child: Text('Close goal', style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close goal',
+                  style: AppTextStyles.labelMedium(
+                    colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               FilledButton(

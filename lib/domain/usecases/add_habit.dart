@@ -7,13 +7,26 @@ class AddHabit {
 
   final HabitRepository _repository;
 
-  Future<void> execute(String id, String name, {int? reminderMinutesSinceMidnight, int? iconIndex}) async {
+  Future<void> execute(
+    String id,
+    String name, {
+    int? reminderMinutesSinceMidnight,
+    int? iconIndex,
+    String? category,
+    HabitFrequency frequency = HabitFrequency.daily,
+    List<int>? customWeekdays,
+    int? targetCountPerDay,
+  }) async {
     final habit = Habit(
       id: id,
       name: name,
       completedDates: [],
       reminderMinutesSinceMidnight: reminderMinutesSinceMidnight,
       iconIndex: iconIndex,
+      category: category,
+      frequency: frequency,
+      customWeekdays: customWeekdays ?? [],
+      targetCountPerDay: targetCountPerDay,
     );
     await _repository.addHabit(habit);
   }

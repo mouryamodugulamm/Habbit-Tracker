@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:habit_tracker/core/core.dart';
 import 'package:habit_tracker/data/models/goal_model.dart';
 import 'package:habit_tracker/data/models/habit_model.dart';
+import 'package:habit_tracker/data/models/habit_model_adapter.dart';
 import 'package:habit_tracker/data/services/notification_service.dart';
 import 'package:habit_tracker/data/services/settings_service.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
@@ -37,7 +38,7 @@ Future<void> _initHive() async {
 }
 
 void _registerHiveAdapters() {
-  Hive.registerAdapter(HabitModelAdapter());
+  Hive.registerAdapter(HabitModelCompatAdapter());
   Hive.registerAdapter(GoalModelAdapter());
 }
 

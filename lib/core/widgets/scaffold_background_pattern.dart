@@ -11,9 +11,7 @@ class ScaffoldBackgroundPattern extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: CustomPaint(
-        painter: _PatternPainter(isDark: isDark),
-      ),
+      child: CustomPaint(painter: _PatternPainter(isDark: isDark)),
     );
   }
 }
@@ -65,7 +63,11 @@ class _PatternPainter extends CustomPainter {
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
     for (var i = -size.height; i < size.width + size.height; i += step) {
-      canvas.drawLine(Offset(i.toDouble(), -20), Offset(i + size.height, size.height + 20), paint);
+      canvas.drawLine(
+        Offset(i.toDouble(), -20),
+        Offset(i + size.height, size.height + 20),
+        paint,
+      );
     }
   }
 
@@ -83,9 +85,17 @@ class _PatternPainter extends CustomPainter {
     }
   }
 
-  void _drawOrbsLightTeal(Canvas canvas, Size size, Color orbColor, double orbRadius) {
+  void _drawOrbsLightTeal(
+    Canvas canvas,
+    Size size,
+    Color orbColor,
+    double orbRadius,
+  ) {
     final topLeft = Offset(-orbRadius * 0.3, -orbRadius * 0.2);
-    final bottomRight = Offset(size.width + orbRadius * 0.2, size.height + orbRadius * 0.25);
+    final bottomRight = Offset(
+      size.width + orbRadius * 0.2,
+      size.height + orbRadius * 0.25,
+    );
     for (final center in [topLeft, bottomRight]) {
       final rect = Rect.fromCircle(center: center, radius: orbRadius);
       final paint = Paint()

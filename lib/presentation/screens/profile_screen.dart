@@ -41,9 +41,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     await notifier.setThemeMode(_themeMode);
     await notifier.setLocale(_locale);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings applied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Settings applied')));
     Navigator.of(context).pop();
   }
 
@@ -54,7 +54,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile & settings', style: AppTextStyles.titleLarge(colorScheme.onSurface)),
+        title: Text(
+          'Profile & settings',
+          style: AppTextStyles.titleLarge(colorScheme.onSurface),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -67,117 +70,154 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             physics: const ClampingScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-          _SectionHeader(icon: Icons.person_outline_rounded, label: 'Profile', colorScheme: colorScheme),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Display name', style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)),
-                const SizedBox(height: AppSpacing.xs),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    hintText: 'Your name',
-                    border: OutlineInputBorder(borderRadius: AppDecorations.cardBorderRadiusSmall),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  ),
-                  style: AppTextStyles.bodyLarge(colorScheme.onSurface),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          _SectionHeader(icon: Icons.palette_outlined, label: 'Theme', colorScheme: colorScheme),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('App appearance', style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)),
-                const SizedBox(height: AppSpacing.md),
-                SegmentedButton<ThemeMode>(
-                  style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: colorScheme.primary,
-                    selectedForegroundColor: colorScheme.onPrimary,
-                  ),
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_rounded), label: Text('System')),
-                    ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded), label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded), label: Text('Dark')),
+              _SectionHeader(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Display name',
+                      style: AppTextStyles.labelMedium(
+                        colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Your name',
+                        border: OutlineInputBorder(
+                          borderRadius: AppDecorations.cardBorderRadiusSmall,
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
+                      ),
+                      style: AppTextStyles.bodyLarge(colorScheme.onSurface),
+                    ),
                   ],
-                  selected: {_themeMode},
-                  onSelectionChanged: (Set<ThemeMode> selected) {
-                    setState(() => _themeMode = selected.first);
-                  },
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          _SectionHeader(icon: Icons.language_rounded, label: 'Language', colorScheme: colorScheme),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: _LanguageTile(
-              languageCode: 'en',
-              label: 'English',
-              selected: _locale?.languageCode == 'en',
-              onTap: () => setState(() => _locale = const Locale('en')),
-              colorScheme: colorScheme,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: _LanguageTile(
-              languageCode: 'es',
-              label: 'Español',
-              selected: _locale?.languageCode == 'es',
-              onTap: () => setState(() => _locale = const Locale('es')),
-              colorScheme: colorScheme,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: _LanguageTile(
-              languageCode: 'fr',
-              label: 'Français',
-              selected: _locale?.languageCode == 'fr',
-              onTap: () => setState(() => _locale = const Locale('fr')),
-              colorScheme: colorScheme,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _ProfileCard(
-            isDark: isDark,
-            colorScheme: colorScheme,
-            child: _LanguageTile(
-              languageCode: null,
-              label: 'System default',
-              selected: _locale == null,
-              onTap: () => setState(() => _locale = null),
-              colorScheme: colorScheme,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          FilledButton.icon(
-            onPressed: _applySettings,
-            icon: const Icon(Icons.check_circle_rounded),
-            label: const Text('Apply settings'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            ),
-          ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _SectionHeader(
+                icon: Icons.palette_outlined,
+                label: 'Theme',
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'App appearance',
+                      style: AppTextStyles.labelMedium(
+                        colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    SegmentedButton<ThemeMode>(
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: colorScheme.primary,
+                        selectedForegroundColor: colorScheme.onPrimary,
+                      ),
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_rounded),
+                          label: Text('System'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          icon: Icon(Icons.light_mode_rounded),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          icon: Icon(Icons.dark_mode_rounded),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {_themeMode},
+                      onSelectionChanged: (Set<ThemeMode> selected) {
+                        setState(() => _themeMode = selected.first);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _SectionHeader(
+                icon: Icons.language_rounded,
+                label: 'Language',
+                colorScheme: colorScheme,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: _LanguageTile(
+                  languageCode: 'en',
+                  label: 'English',
+                  selected: _locale?.languageCode == 'en',
+                  onTap: () => setState(() => _locale = const Locale('en')),
+                  colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: _LanguageTile(
+                  languageCode: 'es',
+                  label: 'Español',
+                  selected: _locale?.languageCode == 'es',
+                  onTap: () => setState(() => _locale = const Locale('es')),
+                  colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: _LanguageTile(
+                  languageCode: 'fr',
+                  label: 'Français',
+                  selected: _locale?.languageCode == 'fr',
+                  onTap: () => setState(() => _locale = const Locale('fr')),
+                  colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _ProfileCard(
+                isDark: isDark,
+                colorScheme: colorScheme,
+                child: _LanguageTile(
+                  languageCode: null,
+                  label: 'System default',
+                  selected: _locale == null,
+                  onTap: () => setState(() => _locale = null),
+                  colorScheme: colorScheme,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              FilledButton.icon(
+                onPressed: _applySettings,
+                icon: const Icon(Icons.check_circle_rounded),
+                label: const Text('Apply settings'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                ),
+              ),
             ],
           ),
         ],
@@ -203,7 +243,10 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Icon(icon, size: 20, color: colorScheme.primary),
         const SizedBox(width: AppSpacing.sm),
-        Text(label, style: AppTextStyles.titleSmall(colorScheme.onSurfaceVariant)),
+        Text(
+          label,
+          style: AppTextStyles.titleSmall(colorScheme.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -255,9 +298,18 @@ class _LanguageTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: AppTextStyles.bodyLarge(colorScheme.onSurface))),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.bodyLarge(colorScheme.onSurface),
+              ),
+            ),
             if (selected)
-              Icon(Icons.check_circle_rounded, size: 22, color: colorScheme.primary),
+              Icon(
+                Icons.check_circle_rounded,
+                size: 22,
+                color: colorScheme.primary,
+              ),
           ],
         ),
       ),

@@ -20,15 +20,17 @@ class HabitNotifier extends StateNotifier<HabitState> {
     required DeleteGoalsForHabit deleteGoalsForHabit,
     required UpdateHabit updateHabit,
     required ToggleHabitCompletion toggleCompletion,
+    required AddHabitCompletion addCompletion,
     NotificationService? notificationService,
-  })  : _getHabits = getHabits,
-        _addHabit = addHabit,
-        _deleteHabit = deleteHabit,
-        _deleteGoalsForHabit = deleteGoalsForHabit,
-        _updateHabit = updateHabit,
-        _toggleCompletion = toggleCompletion,
-        _notificationService = notificationService,
-        super(HabitState.initial);
+  }) : _getHabits = getHabits,
+       _addHabit = addHabit,
+       _deleteHabit = deleteHabit,
+       _deleteGoalsForHabit = deleteGoalsForHabit,
+       _updateHabit = updateHabit,
+       _toggleCompletion = toggleCompletion,
+       _addCompletion = addCompletion,
+       _notificationService = notificationService,
+       super(HabitState.initial);
 
   final GetHabits _getHabits;
   final AddHabit _addHabit;
@@ -36,6 +38,7 @@ class HabitNotifier extends StateNotifier<HabitState> {
   final DeleteGoalsForHabit _deleteGoalsForHabit;
   final UpdateHabit _updateHabit;
   final ToggleHabitCompletion _toggleCompletion;
+  final AddHabitCompletion _addCompletion;
   final NotificationService? _notificationService;
 
   /// Loads habits from storage. When [skipReschedule] is true, skips re-scheduling reminders (e.g. after toggle).
@@ -68,11 +71,28 @@ class HabitNotifier extends StateNotifier<HabitState> {
     bool skipReload = false,
     int? reminderMinutesSinceMidnight,
     int? iconIndex,
+    String? category,
+    HabitFrequency frequency = HabitFrequency.daily,
+    List<int>? customWeekdays,
+    int? targetCountPerDay,
   }) async {
-    await _addHabit.execute(id, name, reminderMinutesSinceMidnight: reminderMinutesSinceMidnight, iconIndex: iconIndex);
+    await _addHabit.execute(
+      id,
+      name,
+      reminderMinutesSinceMidnight: reminderMinutesSinceMidnight,
+      iconIndex: iconIndex,
+      category: category,
+      frequency: frequency,
+      customWeekdays: customWeekdays,
+      targetCountPerDay: targetCountPerDay,
+    );
     final notificationService = _notificationService;
     if (reminderMinutesSinceMidnight != null && notificationService != null) {
-      await notificationService.scheduleDailyReminder(id, name, reminderMinutesSinceMidnight);
+      await notificationService.scheduleDailyReminder(
+        id,
+        name,
+        reminderMinutesSinceMidnight,
+      );
     }
     if (!skipReload) await loadHabits();
   }
@@ -102,6 +122,27 @@ class HabitNotifier extends StateNotifier<HabitState> {
   /// Toggles completion for [habitId] on [date]. Reloads list without re-scheduling all reminders.
   Future<void> toggleCompletion(String habitId, DateTime date) async {
     await _toggleCompletion.execute(habitId, date);
+    await loadHabits(skipReschedule: true);
+  }
+
+  /// Adds a completion for [habitId] (multiple per day). Optional [note]. Reloads list.
+  Future<void> addCompletion(String habitId, {String? note}) async {
+    await _addCompletion.execute(habitId, note: note);
+    await loadHabits(skipReschedule: true);
+  }
+
+  /// Clears all completions for [habitId] on [date] (resets that day to 0).
+  Future<void> resetCompletionsForDate(String habitId, DateTime date) async {
+    final habits = state.habits.valueOrNull;
+    if (habits == null) return;
+    final index = habits.indexWhere((h) => h.id == habitId);
+    if (index < 0) return;
+    final habit = habits[index];
+    final targetDate = Habit.toDate(date);
+    final filtered = habit.completions
+        .where((c) => Habit.toDate(c.completedAt) != targetDate)
+        .toList();
+    await _updateHabit.execute(habit.copyWith(completions: filtered));
     await loadHabits(skipReschedule: true);
   }
 }

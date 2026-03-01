@@ -4,6 +4,7 @@ import 'package:habit_tracker/core/core.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/domain/entities/goal.dart';
+import 'package:habit_tracker/domain/entities/habit.dart';
 import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
 import 'package:habit_tracker/presentation/widgets/habit_icon_picker.dart';
@@ -23,8 +24,12 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
 
   int _selectedIconIndex = 0;
   TimeOfDay? _reminderTime;
+  String? _category;
+  HabitFrequency _frequency = HabitFrequency.daily;
+  List<int> _customWeekdays = [1, 2, 3, 4, 5];
   String? _nameError;
   bool _isSaving = false;
+  int _targetCountPerDay = 1;
   GoalTargetType? _goalTargetType = GoalTargetType.totalDays;
   int? _goalTargetValue;
   bool _goalEnabled = false;
@@ -65,12 +70,17 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
       final reminderMinutes = _reminderTime != null
           ? _reminderTime!.hour * 60 + _reminderTime!.minute
           : null;
+      final categoryTrimmed = _category?.trim();
       await habitNotifier.addHabit(
         habitId,
         name,
         skipReload: true,
         reminderMinutesSinceMidnight: reminderMinutes,
         iconIndex: _selectedIconIndex,
+        category: categoryTrimmed?.isEmpty ?? true ? null : categoryTrimmed,
+        frequency: _frequency,
+        customWeekdays: _frequency == HabitFrequency.custom ? _customWeekdays : null,
+        targetCountPerDay: _targetCountPerDay == 1 ? null : _targetCountPerDay,
       );
       if (_goalEnabled && _goalTargetType != null && _goalTargetValue != null && _goalTargetValue! > 0) {
         await ref.read(goalNotifierProvider.notifier).addGoal(
@@ -142,6 +152,79 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                 },
                 onSubmitted: (_) => _save(),
               ),
+              const SizedBox(height: AppSpacing.lg),
+              TextField(
+                onChanged: (v) => setState(() => _category = v),
+                decoration: const InputDecoration(
+                  labelText: 'Category (optional)',
+                  hintText: 'e.g. Health, Work, Learning',
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              Text(
+                'Target per day',
+                style: AppTextStyles.labelLarge(colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                initialValue: _targetCountPerDay.toString(),
+                decoration: const InputDecoration(
+                  labelText: 'Completions per day',
+                  hintText: 'e.g. 3 for "Drink 3 glasses of water"',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (s) {
+                  final v = int.tryParse(s);
+                  setState(() => _targetCountPerDay = (v == null || v < 1) ? 1 : (v > 99 ? 99 : v));
+                },
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '1 = once per day. Use 2+ for habits you do multiple times (e.g. glasses of water).',
+                style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              Text(
+                'Frequency',
+                style: AppTextStyles.labelLarge(colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SegmentedButton<HabitFrequency>(
+                segments: const [
+                  ButtonSegment(value: HabitFrequency.daily, label: Text('Every day')),
+                  ButtonSegment(value: HabitFrequency.weekdays, label: Text('Weekdays')),
+                  ButtonSegment(value: HabitFrequency.custom, label: Text('Custom')),
+                ],
+                selected: {_frequency},
+                onSelectionChanged: (s) => setState(() => _frequency = s.first),
+              ),
+              if (_frequency == HabitFrequency.custom) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  children: [1, 2, 3, 4, 5, 6, 7].map((w) {
+                    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    final selected = _customWeekdays.contains(w);
+                    return FilterChip(
+                      label: Text(labels[w - 1]),
+                      selected: selected,
+                      onSelected: (v) {
+                        setState(() {
+                          if (v) {
+                            _customWeekdays = [..._customWeekdays, w]..sort();
+                          } else {
+                            _customWeekdays = _customWeekdays.where((d) => d != w).toList();
+                          }
+                          if (_customWeekdays.isEmpty) _customWeekdays = [1];
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xxl),
               Text(
                 'Choose icon',

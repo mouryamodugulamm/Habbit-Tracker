@@ -4,28 +4,49 @@ import 'package:habit_tracker/domain/entities/streak_result.dart';
 /// Use case: compute current and longest streak for a habit.
 ///
 /// Rules:
+/// - Only scheduled days (by [Habit.frequency]) count.
 /// - Same-day entries count as one (deduplicated).
-/// - Dates are sorted internally.
-/// - Streak resets when day gap > 1.
-/// - Current streak = consecutive days ending at the most recent completion.
-/// - Longest streak = maximum consecutive-day run in history.
+/// - Streak resets when there is a gap of more than one scheduled day.
+/// - Current streak = consecutive scheduled days ending at the most recent completion.
+/// - Longest streak = maximum consecutive scheduled-day run in history.
 class CalculateStreak {
   StreakResult execute(Habit habit) {
-    if (habit.completedDates.isEmpty) {
+    final dateOnly = habit.completedDates
+        .map(Habit.toDate)
+        .where((d) => habit.isScheduledOn(d))
+        .toSet()
+        .toList();
+    if (dateOnly.isEmpty) {
       return const StreakResult(currentStreak: 0, longestStreak: 0);
     }
 
-    final dateOnly = habit.completedDates.map(Habit.toDate).toSet().toList();
     dateOnly.sort();
-
     final dateSet = dateOnly.toSet();
     final sorted = dateOnly;
+
+    DateTime? nextScheduledDay(DateTime date) {
+      DateTime d = DateTime.utc(date.year, date.month, date.day).add(const Duration(days: 1));
+      for (int i = 0; i < 8; i++) {
+        if (habit.isScheduledOn(d)) return DateTime.utc(d.year, d.month, d.day);
+        d = d.add(const Duration(days: 1));
+      }
+      return null;
+    }
+
+    DateTime? prevScheduledDay(DateTime date) {
+      DateTime d = DateTime.utc(date.year, date.month, date.day).subtract(const Duration(days: 1));
+      for (int i = 0; i < 8; i++) {
+        if (habit.isScheduledOn(d)) return DateTime.utc(d.year, d.month, d.day);
+        d = d.subtract(const Duration(days: 1));
+      }
+      return null;
+    }
 
     int longestStreak = 1;
     int run = 1;
     for (int i = 1; i < sorted.length; i++) {
-      final diff = sorted[i].difference(sorted[i - 1]).inDays;
-      if (diff == 1) {
+      final nextExpected = nextScheduledDay(sorted[i - 1]);
+      if (nextExpected != null && nextExpected == Habit.toDate(sorted[i])) {
         run++;
       } else {
         run = 1;
@@ -35,16 +56,11 @@ class CalculateStreak {
 
     int currentStreak = 0;
     if (sorted.isNotEmpty) {
-      DateTime cursor = sorted.last;
+      DateTime? prev = prevScheduledDay(sorted.last);
       currentStreak = 1;
-      DateTime prev = DateTime.utc(cursor.year, cursor.month, cursor.day)
-          .subtract(const Duration(days: 1));
-      prev = DateTime.utc(prev.year, prev.month, prev.day);
-      while (dateSet.contains(prev)) {
+      while (prev != null && dateSet.contains(prev)) {
         currentStreak++;
-        prev = DateTime.utc(prev.year, prev.month, prev.day)
-            .subtract(const Duration(days: 1));
-        prev = DateTime.utc(prev.year, prev.month, prev.day);
+        prev = prevScheduledDay(prev);
       }
     }
 

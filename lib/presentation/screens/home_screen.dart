@@ -10,6 +10,7 @@ import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
 import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
+import 'package:habit_tracker/presentation/providers/home_providers.dart';
 import 'package:habit_tracker/presentation/providers/settings_provider.dart';
 import 'package:habit_tracker/core/router/app_router.dart';
 import 'package:habit_tracker/presentation/widgets/empty_state_habits.dart';
@@ -92,6 +93,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 'Good evening';
   }
 
+  Widget _buildHabitTile(
+    BuildContext context,
+    Habit habit,
+    DateTime selectedDate,
+    ColorScheme colorScheme,
+    bool isDark,
+    int animationDelay,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Slidable(
+        key: ValueKey(habit.id),
+        useTextDirection: false,
+        startActionPane: ActionPane(
+          motion: const DrawerMotion(),
+          extentRatio: 0.28,
+          children: [
+            _ThemedDeleteAction(onPressed: () => _scheduleDelete(habit)),
+          ],
+        ),
+        endActionPane: ActionPane(
+          motion: const DrawerMotion(),
+          extentRatio: 0.28,
+          children: [
+            _ThemedEditAction(
+              onPressed: () => AppRouter.toEditHabit(context, habit),
+            ),
+          ],
+        ),
+        child: HabitCard(
+          habit: habit,
+          viewDate: selectedDate,
+          onTap: () => AppRouter.toHabitDetail(context, habit.id),
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 300.ms, delay: (160 + animationDelay * 50).ms)
+        .slideX(begin: 0.05, end: 0, curve: Curves.easeOut);
+  }
+
+  Widget _buildHabitsList(
+    BuildContext context,
+    List<Habit> habits,
+    DateTime selectedDate,
+    ColorScheme colorScheme,
+    bool isDark,
+  ) {
+    return ListView.builder(
+      physics: const ClampingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        homeBottomBarTotalHeight(context),
+      ),
+      itemCount: habits.length,
+      itemBuilder: (context, index) => _buildHabitTile(
+        context,
+        habits[index],
+        selectedDate,
+        colorScheme,
+        isDark,
+        index,
+      ),
+    );
+  }
+
+  Widget _buildHabitsListBySections(
+    BuildContext context,
+    List<Habit> habits,
+    DateTime selectedDate,
+    ColorScheme colorScheme,
+    bool isDark,
+  ) {
+    const uncategorizedLabel = 'Uncategorized';
+    final grouped = <String, List<Habit>>{};
+    for (final h in habits) {
+      final key = (h.category?.trim().isEmpty ?? true) ? uncategorizedLabel : h.category!;
+      grouped.putIfAbsent(key, () => []).add(h);
+    }
+    final sectionOrder = grouped.keys.toList()
+      ..sort((a, b) {
+        if (a == uncategorizedLabel) return -1;
+        if (b == uncategorizedLabel) return 1;
+        return a.compareTo(b);
+      });
+    int delay = 0;
+    final children = <Widget>[];
+    for (final sectionName in sectionOrder) {
+      final sectionHabits = grouped[sectionName]!;
+      children.add(
+        Padding(
+          padding: EdgeInsets.only(
+            top: sectionOrder.indexOf(sectionName) > 0 ? AppSpacing.lg : 0,
+          ),
+          child: _SectionHeader(
+            title: sectionName,
+            count: sectionHabits.length,
+            colorScheme: colorScheme,
+          ),
+        ),
+      );
+      children.add(const SizedBox(height: AppSpacing.sm));
+      for (final habit in sectionHabits) {
+        children.add(_buildHabitTile(
+          context,
+          habit,
+          selectedDate,
+          colorScheme,
+          isDark,
+          delay++,
+        ));
+      }
+    }
+    return ListView(
+      physics: const ClampingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        homeBottomBarTotalHeight(context),
+      ),
+      children: children,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final habitsValue = ref.watch(habitsListProvider);
@@ -101,6 +229,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final greeting = userName != null && userName.isNotEmpty
         ? '${_greeting()}, ${userName.split(' ').first}'
         : _greeting();
+
+    ref.listen<List<Habit>>(homeVisibleHabitsProvider, (prev, next) {
+      final habits = ref.read(habitsListProvider).valueOrNull ?? [];
+      if (habits.isNotEmpty && next.isEmpty && prev != null && prev.isNotEmpty && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No items found')),
+        );
+      }
+    });
 
     final headerGradient = LinearGradient(
       begin: Alignment.topCenter,
@@ -150,221 +287,318 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Padding(
             padding: EdgeInsets.only(bottom: homeBottomBarTotalHeight(context)),
             child: habitsValue.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.screen),
-                child: GlassCard(
-                  isDark: isDark,
-                  useBlur: isDark,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xxl,
-                    vertical: AppSpacing.xxl,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 48,
-                        color: colorScheme.error,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Something went wrong',
-                        style: AppTextStyles.titleMedium(colorScheme.onSurface),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        error.toString(),
-                        style: AppTextStyles.bodySmall(
-                          colorScheme.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      FilledButton(
-                        onPressed: () =>
-                            ref.read(habitNotifierProvider.notifier).loadHabits(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            data: (habits) {
-              if (habits.isEmpty) {
-                return EmptyStateHabits(onAddTap: _openAddHabit);
-              }
-              // Hide the habit that is pending delete so Undo can "bring it back"
-              final visibleHabits = habits
-                  .where((h) => h.id != _pendingDeleteId)
-                  .toList();
-              if (visibleHabits.isEmpty) {
-                return EmptyStateHabits(onAddTap: _openAddHabit);
-              }
-              final completedToday = visibleHabits
-                  .where((h) => h.isCompletedToday)
-                  .length;
-              final total = visibleHabits.length;
-              final progress = total > 0 ? completedToday / total : 0.0;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                      AppSpacing.lg,
-                      AppSpacing.sm,
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.screen),
+                  child: GlassCard(
+                    isDark: isDark,
+                    useBlur: isDark,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xxl,
+                      vertical: AppSpacing.xxl,
                     ),
-                    child: Text(
-                      greeting,
-                      style: AppTextStyles.labelLarge(
-                        colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(duration: 280.ms)
-                      .slideY(begin: 0.05, end: 0, curve: Curves.easeOut),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                    ),
-                    child: _ProgressCard(
-                      completedToday: completedToday,
-                      total: total,
-                      progress: progress,
-                      colorScheme: colorScheme,
-                      isDark: isDark,
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(duration: 320.ms, delay: 80.ms)
-                      .slideY(begin: 0.08, end: 0, curve: Curves.easeOut),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: colorScheme.error,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
                         Text(
-                          'Your habits',
+                          'Something went wrong',
                           style: AppTextStyles.titleMedium(
                             colorScheme.onSurface,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          error.toString(),
+                          style: AppTextStyles.bodySmall(
+                            colorScheme.onSurfaceVariant,
                           ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer
-                                .withValues(alpha: isDark ? 0.5 : 1),
-                            borderRadius:
-                                AppDecorations.cardBorderRadiusSmall,
-                          ),
-                          child: Text(
-                            '$total ${total == 1 ? 'habit' : 'habits'}',
-                            style: AppTextStyles.labelSmall(
-                              colorScheme.onPrimaryContainer,
-                            ),
-                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        FilledButton(
+                          onPressed: () => ref
+                              .read(habitNotifierProvider.notifier)
+                              .loadHabits(),
+                          child: const Text('Retry'),
                         ),
                       ],
                     ),
-                  )
-                      .animate()
-                      .fadeIn(duration: 280.ms, delay: 120.ms)
-                      .slideX(begin: 0.03, end: 0, curve: Curves.easeOut),
-                  Expanded(
-                    child: ShaderMask(
-                      blendMode: BlendMode.dstIn,
-                      shaderCallback: (bounds) => LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: const [
-                          Color(0x00000000),
-                          Color(0xFF000000),
-                          Color(0xFF000000),
-                          Color(0x00000000),
-                        ],
-                        stops: const [0.0, 0.06, 0.94, 1.0],
-                      ).createShader(bounds),
-                      child: ListView.builder(
-                        physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.md,
-                          AppSpacing.lg,
-                          homeBottomBarTotalHeight(context),
-                        ),
-                        itemCount: visibleHabits.length,
-                        itemBuilder: (context, index) {
-                        final habit = visibleHabits[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AppSpacing.md,
+                  ),
+                ),
+              ),
+              data: (habits) {
+                if (habits.isEmpty) {
+                  return EmptyStateHabits(onAddTap: _openAddHabit);
+                }
+                final baseList = ref.watch(homeVisibleHabitsProvider);
+                final visibleHabits = baseList
+                    .where((h) => h.id != _pendingDeleteId)
+                    .toList();
+                final selectedDate = ref.watch(homeSelectedDateProvider);
+                // Micro-completions: sum actual completions (capped at target per habit) and total possible
+                int actualCompletions = 0;
+                int totalPossible = 0;
+                for (final h in visibleHabits) {
+                  final target = h.effectiveTargetPerDay;
+                  totalPossible += target;
+                  actualCompletions += h.completedCountOn(selectedDate).clamp(0, target);
+                }
+                final progress = totalPossible > 0 ? actualCompletions / totalPossible : 0.0;
+                final habitCount = visibleHabits.length;
+                final filter = ref.watch(homeFilterProvider);
+                final sort = ref.watch(homeSortProvider);
+                final categoryFilter = ref.watch(homeCategoryFilterProvider);
+                final distinctCategories = habits
+                    .map((h) => h.category)
+                    .whereType<String>()
+                    .where((s) => s.trim().isNotEmpty)
+                    .toSet()
+                    .toList()
+                  ..sort();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.sm,
+                            AppSpacing.lg,
+                            AppSpacing.sm,
                           ),
-                          child: Slidable(
-                            key: ValueKey(habit.id),
-                            useTextDirection: false,
-                            startActionPane: ActionPane(
-                              motion: const DrawerMotion(),
-                              extentRatio: 0.28,
-                              children: [
-                                _ThemedDeleteAction(
-                                  onPressed: () => _scheduleDelete(habit),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  greeting,
+                                  style: AppTextStyles.labelLarge(
+                                    colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ],
-                            ),
-                            endActionPane: ActionPane(
-                              motion: const DrawerMotion(),
-                              extentRatio: 0.28,
-                              children: [
-                                _ThemedEditAction(
-                                  onPressed: () =>
-                                      AppRouter.toEditHabit(context, habit),
-                                ),
-                              ],
-                            ),
-                            child: HabitCard(
-                              habit: habit,
-                              onTap: () => AppRouter.toHabitDetail(
-                                context,
-                                habit.id,
                               ),
-                            ),
+                              _DateChip(
+                                selectedDate: selectedDate,
+                                onTap: () async {
+                                  final now = DateTime.now();
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: selectedDate.isAfter(now) ? now : selectedDate,
+                                    firstDate: DateTime(2020),
+                                    lastDate: now,
+                                  );
+                                  if (picked != null && mounted) {
+                                    ref.read(homeSelectedDateProvider.notifier).state = picked;
+                                  }
+                                },
+                                onResetToToday: () {
+                                  ref.read(homeSelectedDateProvider.notifier).state = DateTime.now();
+                                },
+                                colorScheme: colorScheme,
+                                isDark: isDark,
+                              ),
+                            ],
                           ),
                         )
-                            .animate()
-                            .fadeIn(
-                              duration: 300.ms,
-                              delay: (160 + index * 50).ms,
-                            )
-                            .slideX(begin: 0.05, end: 0, curve: Curves.easeOut);
-                      },
+                        .animate()
+                        .fadeIn(duration: 280.ms)
+                        .slideY(begin: 0.05, end: 0, curve: Curves.easeOut),
+                    Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.sm,
+                            AppSpacing.lg,
+                            AppSpacing.lg,
+                          ),
+                          child: _ProgressCard(
+                            completedToday: actualCompletions,
+                            total: totalPossible,
+                            progress: progress,
+                            colorScheme: colorScheme,
+                            isDark: isDark,
+                            selectedDate: selectedDate,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 320.ms, delay: 80.ms)
+                        .slideY(begin: 0.08, end: 0, curve: Curves.easeOut),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: isDark
+                            ? BoxDecoration(
+                                color: AppColors.glassSurface,
+                                borderRadius: AppDecorations.cardBorderRadiusSmall,
+                                border: Border.all(
+                                  color: AppColors.glassSurfaceBorder,
+                                  width: 1,
+                                ),
+                              )
+                            : BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                borderRadius: AppDecorations.cardBorderRadiusSmall,
+                                border: Border.all(
+                                  color: colorScheme.outline.withValues(alpha: 0.15),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withValues(alpha: 0.06),
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 8,
+                                    spreadRadius: 0,
+                                  ),
+                                ],
+                              ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _SleekDropdownRow<String>(
+                                label: 'Category',
+                                value: categoryFilter ?? '',
+                                valueLabel: (categoryFilter == null || categoryFilter.isEmpty) ? 'All' : categoryFilter,
+                                colorScheme: colorScheme,
+                                isDark: isDark,
+                                items: [
+                                  ('', 'All'),
+                                  ...distinctCategories.map((c) => (c, c)),
+                                ],
+                                onSelected: (v) => ref.read(homeCategoryFilterProvider.notifier).state =
+                                    (v.isEmpty ? null : v),
+                              ),
+                            ),
+                            _FilterBarDivider(colorScheme: colorScheme, isDark: isDark),
+                            Expanded(
+                              child: _SleekDropdownRow<HomeFilter>(
+                                label: 'Filter',
+                                value: filter,
+                                valueLabel: _filterLabel(filter),
+                                colorScheme: colorScheme,
+                                isDark: isDark,
+                                items: const [
+                                  (HomeFilter.all, 'All'),
+                                  (HomeFilter.completedToday, 'Completed today'),
+                                  (HomeFilter.notDone, 'Not done'),
+                                  (HomeFilter.archived, 'Archived'),
+                                ],
+                                onSelected: (v) => ref.read(homeFilterProvider.notifier).state = v,
+                              ),
+                            ),
+                            _FilterBarDivider(colorScheme: colorScheme, isDark: isDark),
+                            Expanded(
+                              child: _SleekDropdownRow<HomeSort>(
+                                label: 'Sort',
+                                value: sort,
+                                valueLabel: _sortLabel(sort),
+                                colorScheme: colorScheme,
+                                isDark: isDark,
+                                items: const [
+                                  (HomeSort.name, 'Name'),
+                                  (HomeSort.streak, 'Streak'),
+                                  (HomeSort.needsAttention, 'Needs attention'),
+                                ],
+                                onSelected: (v) => ref.read(homeSortProvider.notifier).state = v,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                    Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            0,
+                            AppSpacing.lg,
+                            AppSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Your habits',
+                                style: AppTextStyles.titleMedium(
+                                  colorScheme.onSurface,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer
+                                      .withValues(alpha: isDark ? 0.5 : 1),
+                                  borderRadius:
+                                      AppDecorations.cardBorderRadiusSmall,
+                                ),
+                                child: Text(
+                                  '$habitCount ${habitCount == 1 ? 'habit' : 'habits'}',
+                                  style: AppTextStyles.labelSmall(
+                                    colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 280.ms, delay: 120.ms)
+                        .slideX(begin: 0.03, end: 0, curve: Curves.easeOut),
+                    Expanded(
+                      child: ShaderMask(
+                        blendMode: BlendMode.dstIn,
+                        shaderCallback: (bounds) => LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: const [
+                            Color(0x00000000),
+                            Color(0xFF000000),
+                            Color(0xFF000000),
+                            Color(0x00000000),
+                          ],
+                          stops: const [0.0, 0.06, 0.94, 1.0],
+                        ).createShader(bounds),
+                        child: categoryFilter != null
+                            ? _buildHabitsList(
+                                context,
+                                visibleHabits,
+                                selectedDate,
+                                colorScheme,
+                                isDark,
+                              )
+                            : _buildHabitsListBySections(
+                                context,
+                                visibleHabits,
+                                selectedDate,
+                                colorScheme,
+                                isDark,
+                              ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           HomeBottomBar(
@@ -378,6 +612,266 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+class _DateChip extends StatelessWidget {
+  const _DateChip({
+    required this.selectedDate,
+    required this.onTap,
+    required this.onResetToToday,
+    required this.colorScheme,
+    required this.isDark,
+  });
+
+  final DateTime selectedDate;
+  final VoidCallback onTap;
+  final VoidCallback onResetToToday;
+  final ColorScheme colorScheme;
+  final bool isDark;
+
+  static bool _isToday(DateTime d) {
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  static String _weekday(int w) {
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return names[w - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isToday = _isToday(selectedDate);
+    final label = isToday
+        ? 'Today'
+        : '${_weekday(selectedDate.weekday)}, ${selectedDate.month}/${selectedDate.day}';
+    return Row(
+      children: [
+        Material(
+          color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.5 : 0.9),
+          borderRadius: AppDecorations.cardBorderRadiusSmall,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AppDecorations.cardBorderRadiusSmall,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 20,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    label,
+                    style: AppTextStyles.labelMedium(colorScheme.onPrimaryContainer),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (!isToday) ...[
+          const SizedBox(width: AppSpacing.sm),
+          TextButton(
+            onPressed: onResetToToday,
+            child: Text(
+              'Back to today',
+              style: AppTextStyles.labelSmall(colorScheme.primary),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.count,
+    required this.colorScheme,
+  });
+
+  final String title;
+  final int count;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.titleSmall(colorScheme.onSurfaceVariant)
+              .copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 2,
+          ),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: AppDecorations.cardBorderRadiusSmall,
+          ),
+          child: Text(
+            '$count',
+            style: AppTextStyles.labelSmall(colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _filterLabel(HomeFilter f) {
+  switch (f) {
+    case HomeFilter.all:
+      return 'All';
+    case HomeFilter.completedToday:
+      return 'Completed today';
+    case HomeFilter.notDone:
+      return 'Not done';
+    case HomeFilter.archived:
+      return 'Archived';
+  }
+}
+
+String _sortLabel(HomeSort s) {
+  switch (s) {
+    case HomeSort.name:
+      return 'Name';
+    case HomeSort.streak:
+      return 'Streak';
+    case HomeSort.needsAttention:
+      return 'Needs attention';
+  }
+}
+
+/// Subtle vertical divider between filter bar sections.
+class _FilterBarDivider extends StatelessWidget {
+  const _FilterBarDivider({required this.colorScheme, required this.isDark});
+
+  final ColorScheme colorScheme;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: isDark
+            ? colorScheme.outline.withValues(alpha: 0.25)
+            : colorScheme.outline.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+  }
+}
+
+/// One row: label + sleek dropdown (pill-style trigger, opens menu on tap).
+class _SleekDropdownRow<T> extends StatelessWidget {
+  const _SleekDropdownRow({
+    required this.label,
+    required this.value,
+    required this.valueLabel,
+    required this.items,
+    required this.onSelected,
+    required this.colorScheme,
+    required this.isDark,
+  });
+
+  final String label;
+  final T value;
+  final String valueLabel;
+  final List<(T, String)> items;
+  final void Function(T) onSelected;
+  final ColorScheme colorScheme;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final triggerBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.8);
+    final triggerBorder = isDark
+        ? colorScheme.outline.withValues(alpha: 0.2)
+        : colorScheme.outline.withValues(alpha: 0.12);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTextStyles.labelSmall(colorScheme.onSurfaceVariant).copyWith(
+            fontSize: 10,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        PopupMenuButton<T>(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40),
+          offset: const Offset(0, 8),
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppDecorations.cardBorderRadiusSmall,
+          ),
+          color: isDark ? colorScheme.surfaceContainerHigh : colorScheme.surface,
+          onSelected: onSelected,
+          itemBuilder: (context) => items
+              .map((e) => PopupMenuItem<T>(
+                    value: e.$1,
+                    child: Text(
+                      e.$2,
+                      style: AppTextStyles.bodyMedium(colorScheme.onSurface),
+                    ),
+                  ))
+              .toList(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: triggerBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: triggerBorder, width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    valueLabel,
+                    style: AppTextStyles.bodyMedium(colorScheme.onSurface).copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: colorScheme.primary.withValues(alpha: isDark ? 0.9 : 0.8),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ProgressCard extends StatelessWidget {
   const _ProgressCard({
     required this.completedToday,
@@ -385,6 +879,7 @@ class _ProgressCard extends StatelessWidget {
     required this.progress,
     required this.colorScheme,
     required this.isDark,
+    required this.selectedDate,
   });
 
   final int completedToday;
@@ -392,6 +887,17 @@ class _ProgressCard extends StatelessWidget {
   final double progress;
   final ColorScheme colorScheme;
   final bool isDark;
+  final DateTime selectedDate;
+
+  static bool _isProgressToday(DateTime d) {
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  static String _shortDate(DateTime d) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return '${weekdays[d.weekday - 1]}, ${d.month}/${d.day}';
+  }
 
   /// Progress bar and accent color by severity: low = error, mid = tertiary/primary, high = primary.
   Color _progressColor(ColorScheme scheme) {
@@ -422,7 +928,9 @@ class _ProgressCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "TODAY'S PROGRESS",
+                  _isProgressToday(selectedDate)
+                      ? "TODAY'S PROGRESS"
+                      : 'PROGRESS FOR ${selectedDate.month}/${selectedDate.day}',
                   style: AppTextStyles.labelSmall(
                     colorScheme.onSurfaceVariant,
                   ).copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w600),
@@ -448,10 +956,10 @@ class _ProgressCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '$completedToday of $total habits completed',
-                  style: AppTextStyles.bodySmall(
-                    colorScheme.onSurfaceVariant,
-                  ),
+                  _isProgressToday(selectedDate)
+                      ? '$completedToday of $total completions'
+                      : '$completedToday of $total completions on ${_shortDate(selectedDate)}',
+                  style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -600,10 +1108,7 @@ class _ThemedDeleteAction extends StatelessWidget {
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
         colors: isDark
-            ? [
-                colorScheme.error.withValues(alpha: 0.9),
-                colorScheme.error,
-              ]
+            ? [colorScheme.error.withValues(alpha: 0.9), colorScheme.error]
             : [
                 colorScheme.error,
                 Color.lerp(colorScheme.error, Colors.black, 0.15)!,
@@ -648,8 +1153,9 @@ class _ThemedDeleteAction extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Delete',
-                  style: AppTextStyles.labelMedium(colorScheme.onError)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: AppTextStyles.labelMedium(
+                    colorScheme.onError,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -688,7 +1194,11 @@ class _ThemedEditAction extends StatelessWidget {
               end: Alignment.centerRight,
               colors: [
                 colorScheme.primary,
-                Color.lerp(colorScheme.primary, colorScheme.primaryContainer, 0.3)!,
+                Color.lerp(
+                  colorScheme.primary,
+                  colorScheme.primaryContainer,
+                  0.3,
+                )!,
               ],
             ),
       borderRadius: BorderRadius.only(
@@ -725,16 +1235,13 @@ class _ThemedEditAction extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.edit_rounded,
-                  size: 24,
-                  color: onPrimary,
-                ),
+                Icon(Icons.edit_rounded, size: 24, color: onPrimary),
                 const SizedBox(height: 4),
                 Text(
                   'Edit',
-                  style: AppTextStyles.labelMedium(onPrimary)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: AppTextStyles.labelMedium(
+                    onPrimary,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),

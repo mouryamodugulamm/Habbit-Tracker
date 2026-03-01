@@ -41,12 +41,20 @@ final _deleteHabitUseCaseProvider = Provider<DeleteHabit>((ref) {
   return DeleteHabit(ref.watch(habitRepositoryProvider));
 });
 
-final _deleteGoalsForHabitUseCaseProvider = Provider<DeleteGoalsForHabit>((ref) {
+final _deleteGoalsForHabitUseCaseProvider = Provider<DeleteGoalsForHabit>((
+  ref,
+) {
   return DeleteGoalsForHabit(ref.watch(goalRepositoryProvider));
 });
 
-final _toggleHabitCompletionUseCaseProvider = Provider<ToggleHabitCompletion>((ref) {
+final _toggleHabitCompletionUseCaseProvider = Provider<ToggleHabitCompletion>((
+  ref,
+) {
   return ToggleHabitCompletion(ref.watch(habitRepositoryProvider));
+});
+
+final _addHabitCompletionUseCaseProvider = Provider<AddHabitCompletion>((ref) {
+  return AddHabitCompletion(ref.watch(habitRepositoryProvider));
 });
 
 final _updateHabitUseCaseProvider = Provider<UpdateHabit>((ref) {
@@ -58,14 +66,17 @@ final _calculateStreakUseCaseProvider = Provider<CalculateStreak>((ref) {
 });
 
 /// Injected from main after notification init. Null until overridden.
-final notificationServiceProvider = Provider<NotificationService?>((ref) => null);
+final notificationServiceProvider = Provider<NotificationService?>(
+  (ref) => null,
+);
 
 // ---------------------------------------------------------------------------
 // Presentation state
 // ---------------------------------------------------------------------------
 
-final habitNotifierProvider =
-    StateNotifierProvider<HabitNotifier, HabitState>((ref) {
+final habitNotifierProvider = StateNotifierProvider<HabitNotifier, HabitState>((
+  ref,
+) {
   return HabitNotifier(
     getHabits: ref.watch(_getHabitsUseCaseProvider),
     addHabit: ref.watch(_addHabitUseCaseProvider),
@@ -73,6 +84,7 @@ final habitNotifierProvider =
     deleteGoalsForHabit: ref.watch(_deleteGoalsForHabitUseCaseProvider),
     updateHabit: ref.watch(_updateHabitUseCaseProvider),
     toggleCompletion: ref.watch(_toggleHabitCompletionUseCaseProvider),
+    addCompletion: ref.watch(_addHabitCompletionUseCaseProvider),
     notificationService: ref.watch(notificationServiceProvider),
   );
 });
@@ -83,8 +95,10 @@ final habitsListProvider = Provider<AsyncValue<List<Habit>>>((ref) {
 });
 
 /// Streak for a habit. Updates automatically when habits list changes.
-final streakForHabitProvider =
-    Provider.family<StreakResult?, String>((ref, habitId) {
+final streakForHabitProvider = Provider.family<StreakResult?, String>((
+  ref,
+  habitId,
+) {
   final habitsValue = ref.watch(habitsListProvider);
   return habitsValue.when(
     data: (habits) {

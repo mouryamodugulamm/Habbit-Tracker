@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/constants/habit_icons.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/router/app_router.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
@@ -136,7 +138,24 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           tooltip: 'Back',
         ),
         titleSpacing: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () => AppRouter.toEditHabit(context, habit),
+            tooltip: 'Edit',
+          ),
+          IconButton(
+            icon: const Icon(Icons.upload_rounded),
+            onPressed: () => _exportHistory(context, habit, colorScheme),
+            tooltip: 'Export',
+          ),
+        ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showLogCompletionDialog(context, ref, habit, colorScheme),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Log completion'),
+        ),
       body: Stack(
         children: [
           GradientScaffoldBackground(isDark: isDark),
@@ -175,8 +194,95 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                 _SectionHeader(title: 'This week', colorScheme: colorScheme),
                 const SizedBox(height: AppSpacing.sm),
                 _ThisWeekRow(habit: habit, colorScheme: colorScheme, isDark: isDark),
+                const SizedBox(height: AppSpacing.xxl),
+                _SectionHeader(title: 'Weekly completion', colorScheme: colorScheme),
+                const SizedBox(height: AppSpacing.sm),
+                _CompletionChart(habit: habit, colorScheme: colorScheme, isDark: isDark),
+                const SizedBox(height: AppSpacing.xxl),
+                _SectionHeader(title: 'Completion history', colorScheme: colorScheme),
+                const SizedBox(height: AppSpacing.sm),
+                _CompletionHistoryList(habit: habit, colorScheme: colorScheme, isDark: isDark),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _exportHistory(BuildContext context, Habit habit, ColorScheme colorScheme) {
+    final sorted = List<HabitCompletion>.from(habit.completions)
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    final lines = [
+      'Date,Time,Note',
+      ...sorted.map((c) {
+        final d = c.completedAt;
+        final dateStr = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        final timeStr = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+        final noteStr = (c.note ?? '').replaceAll(',', ';');
+        return '$dateStr,$timeStr,$noteStr';
+      }),
+    ];
+    final csv = lines.join('\n');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Export history'),
+        content: SelectableText(
+          csv,
+          style: AppTextStyles.bodySmall(colorScheme.onSurface),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: csv));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Copy'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogCompletionDialog(BuildContext context, WidgetRef ref, Habit habit, ColorScheme colorScheme) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log completion'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Note (optional)',
+            hintText: 'e.g. 3 glasses of water',
+          ),
+          maxLines: 2,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final note = controller.text.trim();
+              Navigator.of(ctx).pop();
+              await ref.read(habitNotifierProvider.notifier).addCompletion(
+                habit.id,
+                note: note.isEmpty ? null : note,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completion logged')));
+              }
+            },
+            child: const Text('Log'),
           ),
         ],
       ),
@@ -711,6 +817,183 @@ class _ThisWeekRow extends StatelessWidget {
             ),
           );
         }),
+      ),
+    );
+  }
+}
+
+/// Sleek weekly completion: last 4 weeks as compact pills (week label + count), no bar chart.
+class _CompletionChart extends StatelessWidget {
+  const _CompletionChart({
+    required this.habit,
+    required this.colorScheme,
+    required this.isDark,
+  });
+
+  final Habit habit;
+  final ColorScheme colorScheme;
+  final bool isDark;
+
+  static const _weeksCount = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final weekStarts = List.generate(_weeksCount, (i) {
+      final d = DateTime.utc(now.year, now.month, now.day).subtract(Duration(days: (7 * (_weeksCount - 1 - i))));
+      return d;
+    });
+    final completedSet = habit.completedDates.map(Habit.toDate).toSet();
+    final counts = weekStarts.map((weekStart) {
+      final weekEnd = weekStart.add(const Duration(days: 6));
+      return completedSet.where((d) => !d.isBefore(weekStart) && !d.isAfter(weekEnd)).length;
+    }).toList();
+
+    final useGlass = isDark;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+      decoration: isDark
+          ? BoxDecoration(
+              color: AppColors.glassSurface,
+              borderRadius: AppDecorations.cardBorderRadius,
+              border: Border.all(color: AppColors.glassSurfaceBorder),
+            )
+          : BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: AppDecorations.cardBorderRadius,
+            ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(_weeksCount, (i) {
+          final d = weekStarts[i];
+          final count = counts[i];
+          final label = '${d.month}/${d.day}';
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: AppTextStyles.labelSmall(colorScheme.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: count > 0 && useGlass
+                          ? colorScheme.primary.withValues(alpha: 0.25)
+                          : count > 0
+                              ? colorScheme.primary.withValues(alpha: 0.12)
+                              : colorScheme.onSurface.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: AppTextStyles.labelMedium(
+                        count > 0 ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _CompletionHistoryList extends StatelessWidget {
+  const _CompletionHistoryList({
+    required this.habit,
+    required this.colorScheme,
+    required this.isDark,
+  });
+
+  final Habit habit;
+  final ColorScheme colorScheme;
+  final bool isDark;
+
+  static const _weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  static String _formatTime(DateTime d) {
+    final hour = d.hour == 0 ? 12 : (d.hour > 12 ? d.hour - 12 : d.hour);
+    final period = d.hour < 12 ? 'AM' : 'PM';
+    return '$hour:${d.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = List<HabitCompletion>.from(habit.completions)
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+    if (sorted.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Text(
+          'No completions yet',
+          style: AppTextStyles.bodyMedium(colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: isDark
+          ? BoxDecoration(
+              color: AppColors.glassSurface,
+              borderRadius: AppDecorations.cardBorderRadius,
+              border: Border.all(color: AppColors.glassSurfaceBorder),
+            )
+          : BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: AppDecorations.cardBorderRadius,
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: sorted.take(50).map((c) {
+          final d = c.completedAt;
+          final dateLabel = '${_weekdayLabels[d.weekday - 1]}, ${d.month}/${d.day}/${d.year}';
+          final timeLabel = 'Completed at ${_formatTime(d)}';
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, size: 20, color: colorScheme.primary),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        dateLabel,
+                        style: AppTextStyles.bodyMedium(colorScheme.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 28, top: 2),
+                  child: Text(
+                    timeLabel,
+                    style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+                  ),
+                ),
+                if (c.note != null && c.note!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 28, top: 2),
+                    child: Text(
+                      c.note!,
+                      style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
