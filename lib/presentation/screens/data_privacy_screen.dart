@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/app_snackbars.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/presentation/providers/goal_providers.dart';
 import 'package:habit_tracker/presentation/providers/habit_providers.dart';
@@ -50,18 +51,11 @@ class _DataPrivacyScreenState extends ConsumerState<DataPrivacyScreen> {
       await ref.read(habitNotifierProvider.notifier).loadHabits();
       await ref.read(goalNotifierProvider.notifier).loadGoals();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All data deleted')),
-      );
+      AppSnackbars.success(context, 'All data deleted');
       Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        AppSnackbars.error(context, 'Failed to delete: $e');
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);

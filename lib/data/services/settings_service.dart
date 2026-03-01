@@ -10,6 +10,8 @@ class SettingsService {
   static const String _keyUserName = 'user_name';
   static const String _keyThemeMode = 'theme_mode'; // 0=system, 1=light, 2=dark
   static const String _keyLocale = 'locale'; // languageCode e.g. 'en', 'es'
+  static const String _keyAccentIndex = 'accent_index'; // 0=violet, 1=teal, 2=amber, 3=rose
+  static const String _keySwipeHintSeen = 'swipe_hint_seen';
 
   String? get userName => _prefs.getString(_keyUserName);
   Future<void> setUserName(String? value) async {
@@ -49,5 +51,15 @@ class SettingsService {
     } else {
       await _prefs.setString(_keyLocale, code);
     }
+  }
+
+  int get accentIndex => _prefs.getInt(_keyAccentIndex) ?? 0;
+  Future<void> setAccentIndex(int value) async {
+    await _prefs.setInt(_keyAccentIndex, value.clamp(0, 3));
+  }
+
+  bool get swipeHintSeen => _prefs.getBool(_keySwipeHintSeen) ?? false;
+  Future<void> setSwipeHintSeen() async {
+    await _prefs.setBool(_keySwipeHintSeen, true);
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/constants/habit_icons.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/app_snackbars.dart';
 import 'package:habit_tracker/core/router/app_router.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
@@ -245,7 +246,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           FilledButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: csv));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+              AppSnackbars.success(context, 'Copied to clipboard');
               Navigator.of(ctx).pop();
             },
             child: const Text('Copy'),
@@ -284,7 +285,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                 note: note.isEmpty ? null : note,
               );
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completion logged')));
+                AppSnackbars.success(context, 'Completion logged');
               }
             },
             child: const Text('Log'),
@@ -689,12 +690,30 @@ class _CalendarCard extends StatelessWidget {
         calendarBuilders: CalendarBuilders(
           markerBuilder: (context, day, events) {
             if (events.isEmpty) return null;
+            final d = Habit.toDate(day);
+            final count = habit.completedCountOn(d);
+            final target = habit.effectiveTargetPerDay;
+            final isFull = count >= target;
+            if (isFull) {
+              return Positioned(
+                bottom: 2,
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  size: 14,
+                  color: useGlass ? AppColors.glassGradientEnd : colorScheme.primary,
+                ),
+              );
+            }
+            // Partial: show fraction e.g. "2/3" so it's clear at a glance
             return Positioned(
               bottom: 2,
-              child: Icon(
-                Icons.check_circle_rounded,
-                size: 14,
-                color: useGlass ? AppColors.glassGradientEnd : colorScheme.primary,
+              child: Text(
+                '$count/$target',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: useGlass ? AppColors.glassGradientEnd.withValues(alpha: 0.9) : colorScheme.tertiary,
+                ),
               ),
             );
           },
@@ -821,10 +840,14 @@ class _ThisWeekRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = Habit.toDate(now);
-    final completedSet = habit.completedDates.map(Habit.toDate).toSet();
+    final target = habit.effectiveTargetPerDay;
     final weekDays = List.generate(7, (i) {
       final day = DateTime.utc(now.year, now.month, now.day).subtract(Duration(days: 6 - i));
-      return (day, completedSet.contains(day));
+      final d = Habit.toDate(day);
+      final count = habit.completedCountOn(d);
+      final isFull = count >= target;
+      final isPartial = count > 0 && count < target;
+      return (day, isFull, isPartial, count);
     });
 
     final useGlass = isDark;
@@ -852,7 +875,9 @@ class _ThisWeekRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(7, (i) {
           final day = weekDays[i].$1;
-          final completed = weekDays[i].$2;
+          final isFull = weekDays[i].$2;
+          final isPartial = weekDays[i].$3;
+          final count = weekDays[i].$4;
           final isToday = Habit.toDate(day) == today;
           final dayLabel = _weekLabels[day.weekday - 1];
           return Expanded(
@@ -875,20 +900,34 @@ class _ThisWeekRow extends StatelessWidget {
                   height: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: completed && useGlass
+                    gradient: isFull && useGlass
                         ? const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [AppColors.glassGradientStart, AppColors.glassGradientEnd],
                           )
                         : null,
-                    color: completed && !useGlass
+                    color: isFull && !useGlass
                         ? colorScheme.primary
-                        : (completed && useGlass ? null : colorScheme.error.withValues(alpha: isDark ? 0.5 : 0.35)),
+                        : isPartial
+                            ? (useGlass
+                                ? AppColors.glassGradientEnd.withValues(alpha: 0.5)
+                                : colorScheme.tertiary.withValues(alpha: 0.4))
+                            : colorScheme.error.withValues(alpha: isDark ? 0.5 : 0.35),
                   ),
-                  child: completed
+                  alignment: Alignment.center,
+                  child: isFull
                       ? Icon(Icons.check_rounded, size: 18, color: useGlass ? Colors.white : colorScheme.onPrimary)
-                      : null,
+                      : isPartial
+                          ? Text(
+                              '$count/$target',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: useGlass ? Colors.white : colorScheme.onTertiary,
+                              ),
+                            )
+                          : null,
                 ),
               ],
             ),

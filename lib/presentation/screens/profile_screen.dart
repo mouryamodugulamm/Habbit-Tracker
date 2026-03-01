@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/theme/app_accent.dart';
 import 'package:habit_tracker/core/router/app_router.dart';
+import 'package:habit_tracker/core/widgets/app_snackbars.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/presentation/providers/backup_providers.dart';
@@ -43,34 +45,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     await notifier.setThemeMode(_themeMode);
     await notifier.setLocale(_locale);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Settings saved'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    AppSnackbars.success(context, 'Settings saved');
   }
 
   Future<void> _exportBackup(WidgetRef ref, ColorScheme colorScheme) async {
     final error = await exportBackup(ref);
     if (!mounted) return;
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export failed: $error'),
-          backgroundColor: colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackbars.error(context, 'Export failed: $error');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Backup ready to share or save'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      AppSnackbars.success(context, 'Backup ready to share or save');
     }
   }
 
@@ -79,21 +63,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!mounted) return;
     switch (result) {
       case RestoreSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Backup restored'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        AppSnackbars.success(context, 'Backup restored');
       case RestoreError(:final message):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Restore failed: $message'),
-            backgroundColor: colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackbars.error(context, 'Restore failed: $message');
       case RestoreCancelled():
         break;
     }
@@ -286,40 +258,96 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
           Divider(height: AppSpacing.xl, color: colorScheme.outline.withValues(alpha: 0.4)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Text(
-              'Language',
-              style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _LanguageOption(
-            label: 'English',
-            selected: _locale?.languageCode == 'en',
-            onTap: () => setState(() => _locale = const Locale('en')),
+          _LanguageTile(
+            locale: _locale,
             colorScheme: colorScheme,
+            onTap: () => _showLanguageDialog(context, colorScheme),
           ),
-          _LanguageOption(
-            label: 'Español',
-            selected: _locale?.languageCode == 'es',
-            onTap: () => setState(() => _locale = const Locale('es')),
+          Divider(height: AppSpacing.xl, color: colorScheme.outline.withValues(alpha: 0.4)),
+          _AccentTile(
+            accentIndex: ref.watch(accentIndexProvider),
+            isDark: isDark,
             colorScheme: colorScheme,
-          ),
-          _LanguageOption(
-            label: 'Français',
-            selected: _locale?.languageCode == 'fr',
-            onTap: () => setState(() => _locale = const Locale('fr')),
-            colorScheme: colorScheme,
-          ),
-          _LanguageOption(
-            label: 'System default',
-            selected: _locale == null,
-            onTap: () => setState(() => _locale = null),
-            colorScheme: colorScheme,
-            isLast: true,
+            onTap: () => _showAccentDialog(context, colorScheme, isDark),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAccentDialog(BuildContext context, ColorScheme colorScheme, bool isDark) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Accent'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(appAccents.length, (i) {
+            final accent = appAccents[i];
+            final selected = ref.watch(accentIndexProvider) == i;
+            return _AccentOption(
+              accent: accent,
+              selected: selected,
+              isDark: isDark,
+              onTap: () {
+                ref.read(settingsNotifierProvider.notifier).setAccentIndex(i);
+                Navigator.of(ctx).pop();
+              },
+              colorScheme: colorScheme,
+              isLast: i == appAccents.length - 1,
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, ColorScheme colorScheme) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _LanguageOption(
+              label: 'English',
+              selected: _locale?.languageCode == 'en',
+              onTap: () {
+                setState(() => _locale = const Locale('en'));
+                Navigator.of(ctx).pop();
+              },
+              colorScheme: colorScheme,
+            ),
+            _LanguageOption(
+              label: 'Español',
+              selected: _locale?.languageCode == 'es',
+              onTap: () {
+                setState(() => _locale = const Locale('es'));
+                Navigator.of(ctx).pop();
+              },
+              colorScheme: colorScheme,
+            ),
+            _LanguageOption(
+              label: 'Français',
+              selected: _locale?.languageCode == 'fr',
+              onTap: () {
+                setState(() => _locale = const Locale('fr'));
+                Navigator.of(ctx).pop();
+              },
+              colorScheme: colorScheme,
+            ),
+            _LanguageOption(
+              label: 'System default',
+              selected: _locale == null,
+              onTap: () {
+                setState(() => _locale = null);
+                Navigator.of(ctx).pop();
+              },
+              colorScheme: colorScheme,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -447,23 +475,144 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    required this.label,
+class _LanguageTile extends StatelessWidget {
+  const _LanguageTile({
+    required this.locale,
+    required this.colorScheme,
+    required this.onTap,
+  });
+
+  final Locale? locale;
+  final ColorScheme colorScheme;
+  final VoidCallback onTap;
+
+  String get _label {
+    if (locale == null) return 'System default';
+    switch (locale!.languageCode) {
+      case 'en':
+        return 'English';
+      case 'es':
+        return 'Español';
+      case 'fr':
+        return 'Français';
+      default:
+        return locale!.languageCode;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Text(
+                'Language',
+                style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant),
+              ),
+              const Spacer(),
+              Text(
+                _label,
+                style: AppTextStyles.bodyLarge(colorScheme.onSurface),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.chevron_right_rounded, size: 22, color: colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentTile extends StatelessWidget {
+  const _AccentTile({
+    required this.accentIndex,
+    required this.isDark,
+    required this.colorScheme,
+    required this.onTap,
+  });
+
+  final int accentIndex;
+  final bool isDark;
+  final ColorScheme colorScheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final index = accentIndex.clamp(0, appAccents.length - 1);
+    final accent = appAccents[index];
+    final start = isDark ? accent.darkGradientStart : accent.lightGradientStart;
+    final end = isDark ? accent.darkGradientEnd : accent.lightGradientEnd;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          child: Row(
+            children: [
+              Text(
+                'Accent',
+                style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant),
+              ),
+              const Spacer(),
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [start, end],
+                  ),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                accent.name,
+                style: AppTextStyles.bodyLarge(colorScheme.onSurface),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.chevron_right_rounded, size: 22, color: colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentOption extends StatelessWidget {
+  const _AccentOption({
+    required this.accent,
     required this.selected,
+    required this.isDark,
     required this.onTap,
     required this.colorScheme,
     this.isLast = false,
   });
 
-  final String label;
+  final AppAccent accent;
   final bool selected;
+  final bool isDark;
   final VoidCallback onTap;
   final ColorScheme colorScheme;
   final bool isLast;
 
   @override
   Widget build(BuildContext context) {
+    final start = isDark ? accent.darkGradientStart : accent.lightGradientStart;
+    final end = isDark ? accent.darkGradientEnd : accent.lightGradientEnd;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -474,6 +623,67 @@ class _LanguageOption extends StatelessWidget {
             right: AppSpacing.lg,
             top: AppSpacing.sm,
             bottom: isLast ? AppSpacing.lg : AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [start, end],
+                  ),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 0.6),
+                    width: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  accent.name,
+                  style: AppTextStyles.bodyLarge(colorScheme.onSurface),
+                ),
+              ),
+              if (selected)
+                Icon(Icons.check_circle_rounded, size: 22, color: colorScheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageOption extends StatelessWidget {
+  const _LanguageOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.colorScheme,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.sm,
+            bottom: AppSpacing.sm,
           ),
           child: Row(
             children: [

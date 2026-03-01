@@ -14,11 +14,13 @@ final class SettingsState {
     this.userName,
     this.themeMode = ThemeMode.dark,
     this.locale,
+    this.accentIndex = 0,
   });
 
   final String? userName;
   final ThemeMode themeMode;
   final Locale? locale;
+  final int accentIndex;
 }
 
 final settingsNotifierProvider =
@@ -29,15 +31,14 @@ final settingsNotifierProvider =
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
   SettingsNotifier(this._service)
-    : super(
-        SettingsState(
+      : super(SettingsState(
           userName: _service.userName,
           themeMode: _service.themeMode,
           locale: _service.languageCode != null
               ? Locale(_service.languageCode!)
               : null,
-        ),
-      );
+          accentIndex: (_service.accentIndex).clamp(0, 3),
+        ));
 
   final SettingsService _service;
 
@@ -47,6 +48,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       userName: value,
       themeMode: state.themeMode,
       locale: state.locale,
+      accentIndex: state.accentIndex,
     );
   }
 
@@ -56,6 +58,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       userName: state.userName,
       themeMode: mode,
       locale: state.locale,
+      accentIndex: state.accentIndex,
     );
   }
 
@@ -66,6 +69,17 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       userName: state.userName,
       themeMode: state.themeMode,
       locale: locale,
+      accentIndex: state.accentIndex,
+    );
+  }
+
+  Future<void> setAccentIndex(int value) async {
+    await _service.setAccentIndex(value);
+    state = SettingsState(
+      userName: state.userName,
+      themeMode: state.themeMode,
+      locale: state.locale,
+      accentIndex: value.clamp(0, 3),
     );
   }
 }
@@ -80,4 +94,13 @@ final localeProvider = Provider<Locale?>((ref) {
 
 final userNameProvider = Provider<String?>((ref) {
   return ref.watch(settingsNotifierProvider).userName;
+});
+
+final accentIndexProvider = Provider<int>((ref) {
+  try {
+    final index = ref.watch(settingsNotifierProvider).accentIndex;
+    return index.clamp(0, 3);
+  } catch (_) {
+    return 0;
+  }
 });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:habit_tracker/core/theme/app_accent.dart';
 import 'package:habit_tracker/core/theme/app_colors.dart';
 import 'package:habit_tracker/core/theme/app_decorations.dart';
 import 'package:habit_tracker/core/theme/app_text_styles.dart';
@@ -8,6 +9,65 @@ import 'package:habit_tracker/core/theme/app_text_styles.dart';
 /// Design system: light and dark themes using [AppColors], [AppTextStyles], and rounded card style.
 class AppTheme {
   AppTheme._();
+
+  static AppAccent _accent(int index) =>
+      appAccents[index.clamp(0, appAccents.length - 1)];
+
+  static ThemeData lightThemeForAccent(int accentIndex) {
+    final accent = _accent(accentIndex);
+    final colorScheme = ColorScheme.light(
+      primary: accent.lightPrimary,
+      onPrimary: AppColors.lightOnPrimary,
+      primaryContainer: accent.lightPrimaryContainer,
+      onPrimaryContainer: AppColors.lightOnPrimaryContainer,
+      secondary: AppColors.lightSecondary,
+      onSecondary: AppColors.lightOnSecondary,
+      secondaryContainer: AppColors.lightSecondaryContainer,
+      onSecondaryContainer: AppColors.lightOnSecondaryContainer,
+      tertiary: AppColors.lightTertiary,
+      onTertiary: AppColors.lightOnTertiary,
+      tertiaryContainer: AppColors.lightTertiaryContainer,
+      onTertiaryContainer: AppColors.lightOnTertiaryContainer,
+      surface: AppColors.lightSurface,
+      onSurface: AppColors.lightOnSurface,
+      surfaceContainerHighest: AppColors.lightSurfaceVariant,
+      onSurfaceVariant: AppColors.lightOnSurfaceVariant,
+      outline: AppColors.lightOutline,
+      outlineVariant: AppColors.lightOutlineVariant,
+      error: AppColors.lightError,
+      onError: AppColors.lightOnError,
+      surfaceContainerLowest: AppColors.lightBackground,
+    );
+    return _lightThemeData(colorScheme, accent.lightGradientEnd);
+  }
+
+  static ThemeData darkThemeForAccent(int accentIndex) {
+    final accent = _accent(accentIndex);
+    final colorScheme = ColorScheme.dark(
+      primary: accent.darkPrimary,
+      onPrimary: AppColors.darkOnPrimary,
+      primaryContainer: accent.darkPrimaryContainer,
+      onPrimaryContainer: AppColors.darkOnPrimaryContainer,
+      secondary: AppColors.darkSecondary,
+      onSecondary: AppColors.darkOnSecondary,
+      secondaryContainer: AppColors.darkSecondaryContainer,
+      onSecondaryContainer: AppColors.darkOnSecondaryContainer,
+      tertiary: AppColors.darkTertiary,
+      onTertiary: AppColors.darkOnTertiary,
+      tertiaryContainer: AppColors.darkTertiaryContainer,
+      onTertiaryContainer: AppColors.darkOnTertiaryContainer,
+      surface: AppColors.darkSurface,
+      onSurface: AppColors.darkOnSurface,
+      surfaceContainerHighest: AppColors.darkSurfaceVariant,
+      onSurfaceVariant: AppColors.darkOnSurfaceVariant,
+      outline: AppColors.darkOutline,
+      outlineVariant: AppColors.darkOutlineVariant,
+      error: AppColors.darkError,
+      onError: AppColors.darkOnError,
+      surfaceContainerLowest: AppColors.darkBackground,
+    );
+    return _darkThemeData(colorScheme, accent.darkGradientEnd);
+  }
 
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.light(
@@ -33,7 +93,10 @@ class AppTheme {
       onError: AppColors.lightOnError,
       surfaceContainerLowest: AppColors.lightBackground,
     );
+    return _lightThemeData(colorScheme);
+  }
 
+  static ThemeData _lightThemeData(ColorScheme colorScheme, [Color? scaffoldBg]) {
     final textTheme = TextTheme(
       displayLarge: AppTextStyles.displayLarge(AppColors.lightOnSurface),
       displayMedium: AppTextStyles.displayMedium(AppColors.lightOnSurface),
@@ -51,7 +114,6 @@ class AppTheme {
       labelMedium: AppTextStyles.labelMedium(AppColors.lightOnSurface),
       labelSmall: AppTextStyles.labelSmall(AppColors.lightOnSurface),
     );
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -63,9 +125,8 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.lightOnSurface,
-        titleTextStyle: AppTextStyles.titleLarge(
-          AppColors.lightOnSurface,
-        ).copyWith(fontWeight: FontWeight.w700),
+        titleTextStyle: AppTextStyles.titleLarge(AppColors.lightOnSurface)
+            .copyWith(fontWeight: FontWeight.w700),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
@@ -84,32 +145,30 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lightPrimary,
-          foregroundColor: AppColors.lightOnPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           elevation: 2,
-          shadowColor: AppColors.lightPrimary.withValues(alpha: 0.4),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(
-            AppColors.lightOnPrimary,
-          ).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(colorScheme.onPrimary)
+              .copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.lightPrimary,
-          foregroundColor: AppColors.lightOnPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           elevation: 2,
-          shadowColor: AppColors.lightPrimary.withValues(alpha: 0.4),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(
-            AppColors.lightOnPrimary,
-          ).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(colorScheme.onPrimary)
+              .copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -124,18 +183,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppDecorations.cardBorderRadiusSmall,
-          borderSide: const BorderSide(color: AppColors.lightPrimary, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: AppTextStyles.bodyMedium(AppColors.lightOnSurfaceVariant),
       ),
-      scaffoldBackgroundColor: AppColors.lightGradientMid,
+      scaffoldBackgroundColor: scaffoldBg ?? AppColors.lightGradientMid,
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.lightPrimary,
-        foregroundColor: AppColors.lightOnPrimary,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 4,
         focusElevation: 6,
         hoverElevation: 6,
@@ -167,7 +223,10 @@ class AppTheme {
       onError: AppColors.darkOnError,
       surfaceContainerLowest: AppColors.darkBackground,
     );
+    return _darkThemeData(colorScheme);
+  }
 
+  static ThemeData _darkThemeData(ColorScheme colorScheme, [Color? scaffoldBg]) {
     final textTheme = TextTheme(
       displayLarge: AppTextStyles.displayLarge(AppColors.darkOnSurface),
       displayMedium: AppTextStyles.displayMedium(AppColors.darkOnSurface),
@@ -185,7 +244,6 @@ class AppTheme {
       labelMedium: AppTextStyles.labelMedium(AppColors.darkOnSurface),
       labelSmall: AppTextStyles.labelSmall(AppColors.darkOnSurface),
     );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -198,9 +256,8 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.darkOnSurface,
-        titleTextStyle: AppTextStyles.titleLarge(
-          AppColors.darkOnSurface,
-        ).copyWith(fontWeight: FontWeight.w700),
+        titleTextStyle: AppTextStyles.titleLarge(AppColors.darkOnSurface)
+            .copyWith(fontWeight: FontWeight.w700),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
@@ -219,32 +276,30 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkPrimary,
-          foregroundColor: AppColors.darkOnPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           elevation: 2,
-          shadowColor: AppColors.darkPrimary.withValues(alpha: 0.5),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(
-            AppColors.darkOnPrimary,
-          ).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(colorScheme.onPrimary)
+              .copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.darkPrimary,
-          foregroundColor: AppColors.darkOnPrimary,
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           elevation: 2,
-          shadowColor: AppColors.darkPrimary.withValues(alpha: 0.5),
+          shadowColor: colorScheme.primary.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: AppDecorations.cardBorderRadiusSmall,
           ),
-          textStyle: AppTextStyles.labelLarge(
-            AppColors.darkOnPrimary,
-          ).copyWith(fontWeight: FontWeight.w600),
+          textStyle: AppTextStyles.labelLarge(colorScheme.onPrimary)
+              .copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -259,18 +314,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppDecorations.cardBorderRadiusSmall,
-          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: AppTextStyles.bodyMedium(AppColors.darkOnSurfaceVariant),
       ),
-      scaffoldBackgroundColor: AppColors.glassBackground,
+      scaffoldBackgroundColor: scaffoldBg ?? AppColors.glassBackground,
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.darkPrimary,
-        foregroundColor: AppColors.darkOnPrimary,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 4,
         focusElevation: 6,
         hoverElevation: 6,

@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:habit_tracker/core/core.dart';
+import 'package:habit_tracker/core/widgets/app_snackbars.dart';
 import 'package:habit_tracker/core/widgets/glass_card.dart';
 import 'package:habit_tracker/core/widgets/gradient_scaffold_background.dart';
 import 'package:habit_tracker/domain/entities/habit.dart';
@@ -27,8 +29,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _deleteTimer;
-  Timer? _snackBarHideTimer;
   String? _pendingDeleteId;
+  bool _swipeHintCheckScheduled = false;
 
   @override
   void initState() {
@@ -39,10 +41,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  void _showSwipeHintIfNeeded(List<Habit> habits) {
+    if (habits.isEmpty || _swipeHintCheckScheduled) return;
+    final service = ref.read(settingsServiceProvider);
+    if (service.swipeHintSeen) return;
+    _swipeHintCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final again = ref.read(settingsServiceProvider);
+      if (again.swipeHintSeen) return;
+      await _showSwipeHintDialog();
+    });
+  }
+
+  Future<void> _showSwipeHintDialog() async {
+    if (!mounted) return;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.swipe_rounded, color: colorScheme.primary, size: 28),
+            const SizedBox(width: 10),
+            const Text('Swipe on habits'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Swipe any habit card to reveal actions:',
+              style: AppTextStyles.bodyMedium(colorScheme.onSurface),
+            ),
+            const SizedBox(height: 16),
+            _SwipeHintRow(
+              icon: Icons.chevron_right_rounded,
+              label: 'Swipe left',
+              action: 'Edit',
+              color: colorScheme.primary,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 10),
+            _SwipeHintRow(
+              icon: Icons.chevron_left_rounded,
+              label: 'Swipe right',
+              action: 'Delete',
+              color: colorScheme.error,
+              isDark: isDark,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await ref.read(settingsServiceProvider).setSwipeHintSeen();
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _deleteTimer?.cancel();
-    _snackBarHideTimer?.cancel();
     super.dispose();
   }
 
@@ -52,7 +125,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _scheduleDelete(Habit habit) {
     _deleteTimer?.cancel();
-    _snackBarHideTimer?.cancel();
     _pendingDeleteId = habit.id;
     _deleteTimer = Timer(const Duration(seconds: 3), () {
       if (_pendingDeleteId != null) {
@@ -62,28 +134,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _deleteTimer = null;
     });
     setState(() {});
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text("'${habit.name}' deleted"),
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            _snackBarHideTimer?.cancel();
-            messenger.hideCurrentSnackBar();
-            _deleteTimer?.cancel();
-            _pendingDeleteId = null;
-            setState(() {});
-          },
-        ),
-      ),
+    AppSnackbars.withAction(
+      context,
+      message: "'${habit.name}' deleted",
+      actionLabel: 'Undo',
+      onAction: () {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _deleteTimer?.cancel();
+        _pendingDeleteId = null;
+        setState(() {});
+      },
     );
-    _snackBarHideTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) messenger.hideCurrentSnackBar();
-      _snackBarHideTimer = null;
-    });
   }
 
   static String _greeting() {
@@ -107,15 +168,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         key: ValueKey(habit.id),
         useTextDirection: false,
         startActionPane: ActionPane(
-          motion: const DrawerMotion(),
-          extentRatio: 0.28,
+          motion: const BehindMotion(),
+          extentRatio: 0.26,
           children: [
             _ThemedDeleteAction(onPressed: () => _scheduleDelete(habit)),
           ],
         ),
         endActionPane: ActionPane(
-          motion: const DrawerMotion(),
-          extentRatio: 0.28,
+          motion: const BehindMotion(),
+          extentRatio: 0.26,
           children: [
             _ThemedEditAction(
               onPressed: () => AppRouter.toEditHabit(context, habit),
@@ -233,9 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen<List<Habit>>(homeVisibleHabitsProvider, (prev, next) {
       final habits = ref.read(habitsListProvider).valueOrNull ?? [];
       if (habits.isNotEmpty && next.isEmpty && prev != null && prev.isNotEmpty && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No items found')),
-        );
+        AppSnackbars.success(context, 'No items found');
       }
     });
 
@@ -341,6 +400,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (habits.isEmpty) {
                   return EmptyStateHabits(onAddTap: _openAddHabit);
                 }
+                _showSwipeHintIfNeeded(habits);
                 final baseList = ref.watch(homeVisibleHabitsProvider);
                 final visibleHabits = baseList
                     .where((h) => h.id != _pendingDeleteId)
@@ -356,6 +416,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 }
                 final progress = totalPossible > 0 ? actualCompletions / totalPossible : 0.0;
                 final habitCount = visibleHabits.length;
+                final habitsAtGoal = visibleHabits
+                    .where((h) => h.completedCountOn(selectedDate) >= h.effectiveTargetPerDay)
+                    .length;
                 final filter = ref.watch(homeFilterProvider);
                 final sort = ref.watch(homeSortProvider);
                 final categoryFilter = ref.watch(homeCategoryFilterProvider);
@@ -425,6 +488,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: _ProgressCard(
                             completedToday: actualCompletions,
                             total: totalPossible,
+                            habitsAtGoal: habitsAtGoal,
+                            habitCount: habitCount,
                             progress: progress,
                             colorScheme: colorScheme,
                             isDark: isDark,
@@ -876,6 +941,8 @@ class _ProgressCard extends StatelessWidget {
   const _ProgressCard({
     required this.completedToday,
     required this.total,
+    required this.habitsAtGoal,
+    required this.habitCount,
     required this.progress,
     required this.colorScheme,
     required this.isDark,
@@ -884,6 +951,8 @@ class _ProgressCard extends StatelessWidget {
 
   final int completedToday;
   final int total;
+  final int habitsAtGoal;
+  final int habitCount;
   final double progress;
   final ColorScheme colorScheme;
   final bool isDark;
@@ -899,12 +968,18 @@ class _ProgressCard extends StatelessWidget {
     return '${weekdays[d.weekday - 1]}, ${d.month}/${d.day}';
   }
 
-  /// Progress bar and accent color by severity: low = error, mid = tertiary/primary, high = primary.
   Color _progressColor(ColorScheme scheme) {
     if (progress <= 0.25) return scheme.error;
     if (progress <= 0.5) return scheme.tertiary;
-    if (progress <= 0.75) return scheme.primary;
     return scheme.primary;
+  }
+
+  String _statusLine() {
+    if (progress >= 1) return 'All done for today!';
+    if (progress >= 0.75) return 'Almost there!';
+    if (progress >= 0.5) return 'On track';
+    if (progress > 0) return 'Good start';
+    return 'Tap habits to log completions';
   }
 
   @override
@@ -916,103 +991,186 @@ class _ProgressCard extends StatelessWidget {
     final progressBarBackground = isDark
         ? AppColors.glassSurfaceBorder
         : colorScheme.surfaceContainerHighest.withValues(alpha: 0.8);
-
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isProgressToday(selectedDate)
-                      ? "TODAY'S PROGRESS"
-                      : 'PROGRESS FOR ${selectedDate.month}/${selectedDate.day}',
-                  style: AppTextStyles.labelSmall(
-                    colorScheme.onSurfaceVariant,
-                  ).copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '$percentage',
-                      style: AppTextStyles.displaySmall(
-                        progressColor,
-                      ).copyWith(fontWeight: FontWeight.w700, height: 1.1),
-                    ),
-                    Text(
-                      '%',
-                      style: AppTextStyles.titleLarge(
-                        progressColor,
-                      ).copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  _isProgressToday(selectedDate)
-                      ? '$completedToday of $total completions'
-                      : '$completedToday of $total completions on ${_shortDate(selectedDate)}',
-                  style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: isDark
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.glassGradientStart,
-                          AppColors.glassGradientEnd,
-                        ],
-                      )
-                    : null,
-                color: isDark ? null : progressColor.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                progress >= 1
-                    ? Icons.check_circle_rounded
-                    : Icons.trending_up_rounded,
-                size: 28,
-                color: isDark ? Colors.white : progressColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: isDark
-              ? _GradientProgressBar(
-                  value: progress.clamp(0.0, 1.0),
-                  backgroundColor: progressBarBackground,
-                )
-              : LinearProgressIndicator(
-                  value: progress.clamp(0.0, 1.0),
-                  minHeight: 10,
-                  backgroundColor: progressBarBackground,
-                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                ),
-        ),
-      ],
-    );
+    final isToday = _isProgressToday(selectedDate);
 
     return GlassCard(
       isDark: isDark,
       useBlur: isDark,
       padding: const EdgeInsets.all(AppSpacing.xl),
-      child: content,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: title + status chip
+          Row(
+            children: [
+              Icon(
+                Icons.insights_rounded,
+                size: 18,
+                color: colorScheme.primary.withValues(alpha: isDark ? 0.9 : 0.8),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isToday ? "Today's progress" : 'Progress · ${_shortDate(selectedDate)}',
+                style: AppTextStyles.labelMedium(colorScheme.onSurfaceVariant)
+                    .copyWith(letterSpacing: 0.3, fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: progressColor.withValues(alpha: isDark ? 0.25 : 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  progress >= 1 ? 'Complete' : '${percentage}%',
+                  style: AppTextStyles.labelSmall(progressColor)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Main percentage + status line + icon
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$percentage',
+                          style: AppTextStyles.displayMedium(progressColor)
+                              .copyWith(fontWeight: FontWeight.w800, height: 1.0),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '%',
+                          style: AppTextStyles.titleMedium(progressColor)
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _statusLine(),
+                      style: AppTextStyles.bodySmall(colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // Stats row: habits at goal + completions
+                    Row(
+                      children: [
+                        _MiniStat(
+                          icon: Icons.check_circle_outline_rounded,
+                          value: '$habitsAtGoal',
+                          label: habitsAtGoal == 1 ? 'habit at goal' : 'habits at goal',
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(width: 16),
+                        _MiniStat(
+                          icon: Icons.add_task_rounded,
+                          value: '$completedToday',
+                          label: total == 1 ? 'of $total completion' : 'of $total completions',
+                          colorScheme: colorScheme,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: isDark
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.glassGradientStart,
+                            AppColors.glassGradientEnd,
+                          ],
+                        )
+                      : null,
+                  color: isDark ? null : progressColor.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    if (progress >= 1)
+                      BoxShadow(
+                        color: progressColor.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        spreadRadius: 0,
+                      ),
+                  ],
+                ),
+                child: Icon(
+                  progress >= 1
+                      ? Icons.celebration_rounded
+                      : (progress >= 0.5 ? Icons.trending_up_rounded : Icons.flag_rounded),
+                  size: 26,
+                  color: isDark ? Colors.white : progressColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: isDark
+                ? _GradientProgressBar(
+                    value: progress.clamp(0.0, 1.0),
+                    backgroundColor: progressBarBackground,
+                  )
+                : LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 12,
+                    backgroundColor: progressBarBackground,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.colorScheme,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: AppTextStyles.labelMedium(colorScheme.onSurface)
+              .copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall(colorScheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 }
@@ -1031,7 +1189,7 @@ class _GradientProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final height = 10.0;
+        const height = 12.0;
         return Stack(
           children: [
             Container(
@@ -1090,7 +1248,60 @@ class FractionallySizedBox extends StatelessWidget {
   }
 }
 
-/// Themed delete swipe action: gradient background, rounded left corners, icon + label.
+/// One row in the swipe hint dialog: direction icon + "Swipe X" + action name.
+class _SwipeHintRow extends StatelessWidget {
+  const _SwipeHintRow({
+    required this.icon,
+    required this.label,
+    required this.action,
+    required this.color,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final String action;
+  final Color color;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isDark ? 0.3 : 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 22, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.labelSmall(colorScheme.onSurfaceVariant),
+              ),
+              Text(
+                action,
+                style: AppTextStyles.titleSmall(colorScheme.onSurface)
+                    .copyWith(fontWeight: FontWeight.w600, color: color),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Themed delete swipe action: gradient background, rounded left corners, icon in circle + label.
 class _ThemedDeleteAction extends StatelessWidget {
   const _ThemedDeleteAction({required this.onPressed});
 
@@ -1108,10 +1319,13 @@ class _ThemedDeleteAction extends StatelessWidget {
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
         colors: isDark
-            ? [colorScheme.error.withValues(alpha: 0.9), colorScheme.error]
+            ? [
+                colorScheme.error.withValues(alpha: 0.85),
+                colorScheme.error,
+              ]
             : [
                 colorScheme.error,
-                Color.lerp(colorScheme.error, Colors.black, 0.15)!,
+                Color.lerp(colorScheme.error, Colors.black, 0.12)!,
               ],
       ),
       borderRadius: BorderRadius.only(
@@ -1120,9 +1334,9 @@ class _ThemedDeleteAction extends StatelessWidget {
       ),
       boxShadow: [
         BoxShadow(
-          color: colorScheme.error.withValues(alpha: 0.25),
-          offset: const Offset(-1, 0),
-          blurRadius: 6,
+          color: colorScheme.error.withValues(alpha: 0.2),
+          offset: const Offset(-2, 0),
+          blurRadius: 8,
           spreadRadius: 0,
         ),
       ],
@@ -1132,7 +1346,10 @@ class _ThemedDeleteAction extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onPressed,
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onPressed();
+          },
           borderRadius: BorderRadius.only(
             topLeft: radius.topLeft,
             bottomLeft: radius.bottomLeft,
@@ -1140,22 +1357,30 @@ class _ThemedDeleteAction extends StatelessWidget {
           child: Container(
             decoration: decoration,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.delete_rounded,
-                  size: 24,
-                  color: colorScheme.onError,
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onError.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 18,
+                    color: colorScheme.onError,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Delete',
-                  style: AppTextStyles.labelMedium(
-                    colorScheme.onError,
-                  ).copyWith(fontWeight: FontWeight.w600),
+                  style: AppTextStyles.labelSmall(colorScheme.onError)
+                      .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.2, fontSize: 11),
                 ),
               ],
             ),
@@ -1166,7 +1391,7 @@ class _ThemedDeleteAction extends StatelessWidget {
   }
 }
 
-/// Themed edit swipe action: gradient background, rounded right corners, icon + label.
+/// Themed edit swipe action: gradient background, rounded right corners, icon in circle + label.
 class _ThemedEditAction extends StatelessWidget {
   const _ThemedEditAction({required this.onPressed});
 
@@ -1197,7 +1422,7 @@ class _ThemedEditAction extends StatelessWidget {
                 Color.lerp(
                   colorScheme.primary,
                   colorScheme.primaryContainer,
-                  0.3,
+                  0.25,
                 )!,
               ],
             ),
@@ -1208,9 +1433,9 @@ class _ThemedEditAction extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: (isDark ? AppColors.glassGradientEnd : colorScheme.primary)
-              .withValues(alpha: 0.3),
-          offset: const Offset(1, 0),
-          blurRadius: 8,
+              .withValues(alpha: 0.25),
+          offset: const Offset(2, 0),
+          blurRadius: 10,
           spreadRadius: 0,
         ),
       ],
@@ -1222,7 +1447,10 @@ class _ThemedEditAction extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onPressed,
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onPressed();
+          },
           borderRadius: BorderRadius.only(
             topRight: radius.topRight,
             bottomRight: radius.bottomRight,
@@ -1230,18 +1458,26 @@ class _ThemedEditAction extends StatelessWidget {
           child: Container(
             decoration: decoration,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.edit_rounded, size: 24, color: onPrimary),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: onPrimary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(Icons.edit_outlined, size: 18, color: onPrimary),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   'Edit',
-                  style: AppTextStyles.labelMedium(
-                    onPrimary,
-                  ).copyWith(fontWeight: FontWeight.w600),
+                  style: AppTextStyles.labelSmall(onPrimary)
+                      .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.2, fontSize: 11),
                 ),
               ],
             ),
