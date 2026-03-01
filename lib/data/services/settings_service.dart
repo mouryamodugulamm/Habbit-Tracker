@@ -10,7 +10,8 @@ class SettingsService {
   static const String _keyUserName = 'user_name';
   static const String _keyThemeMode = 'theme_mode'; // 0=system, 1=light, 2=dark
   static const String _keyLocale = 'locale'; // languageCode e.g. 'en', 'es'
-  static const String _keyAccentIndex = 'accent_index'; // 0=violet, 1=teal, 2=amber, 3=rose
+  static const String _keyAccentIndex =
+      'accent_index'; // 0=violet, 1=teal, 2=amber, 3=rose
   static const String _keySwipeHintSeen = 'swipe_hint_seen';
 
   String? get userName => _prefs.getString(_keyUserName);
